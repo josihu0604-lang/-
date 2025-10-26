@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qetta-production
+  labels:
+    name: qetta-production
+    environment: production
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: qetta-api
+  namespace: qetta-production
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: qetta-web
+  namespace: qetta-production

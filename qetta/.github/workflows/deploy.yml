@@ -1,0 +1,331 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_API: ${{ github.repository }}/qetta-api
+  IMAGE_NAME_WEB: ${{ github.repository }}/qetta-web
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: qetta_test
+          POSTGRES_USER: qetta
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: '**/package-lock.json'
+    
+    - name: Install API dependencies
+      working-directory: ./services/api
+      run: npm ci
+    
+    - name: Run API tests
+      working-directory: ./services/api
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://qetta:test_password@localhost:5432/qetta_test
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test_secret_key_minimum_32_characters_long
+      run: npm test
+    
+    - name: Install Web dependencies
+      working-directory: ./services/web
+      run: npm ci
+    
+    - name: Build Web
+      working-directory: ./services/web
+      env:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+      run: npm run build
+
+  build-and-push:
+    name: Build and Push Docker Images
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata for API
+      id: meta-api
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push API image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/api
+        push: true
+        tags: ${{ steps.meta-api.outputs.tags }}
+        labels: ${{ steps.meta-api.outputs.labels }}
+        cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:buildcache
+        cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:buildcache,mode=max
+    
+    - name: Extract metadata for Web
+      id: meta-web
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WEB }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push Web image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/web
+        push: true
+        tags: ${{ steps.meta-web.outputs.tags }}
+        labels: ${{ steps.meta-web.outputs.labels }}
+        cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WEB }}:buildcache
+        cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WEB }}:buildcache,mode=max
+
+  deploy:
+    name: Deploy to Kubernetes
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+    
+    - name: Configure Kubernetes context
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+    
+    - name: Save pre-deployment state
+      id: save-state
+      run: |
+        echo "Saving current deployment state for potential rollback..."
+        kubectl get deployment qetta-api -n qetta-production -o yaml > /tmp/api-deployment-backup.yaml || echo "No existing API deployment"
+        kubectl get deployment qetta-web -n qetta-production -o yaml > /tmp/web-deployment-backup.yaml || echo "No existing Web deployment"
+        
+        # Save current revision numbers
+        API_REVISION=$(kubectl rollout history deployment/qetta-api -n qetta-production 2>/dev/null | tail -1 | awk '{print $1}') || echo "0"
+        WEB_REVISION=$(kubectl rollout history deployment/qetta-web -n qetta-production 2>/dev/null | tail -1 | awk '{print $1}') || echo "0"
+        
+        echo "api_revision=$API_REVISION" >> $GITHUB_OUTPUT
+        echo "web_revision=$WEB_REVISION" >> $GITHUB_OUTPUT
+    
+    - name: Deploy to Kubernetes
+      id: deploy
+      run: |
+        echo "Applying Kubernetes manifests..."
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/database/
+        kubectl apply -f k8s/pvc.yaml
+        kubectl apply -f k8s/network-policy.yaml
+        kubectl apply -f k8s/pod-disruption-budget.yaml
+        kubectl apply -f k8s/api/
+        kubectl apply -f k8s/web/
+        kubectl apply -f k8s/ingress.yaml
+    
+    - name: Wait for API deployment
+      id: wait-api
+      timeout-minutes: 10
+      run: |
+        echo "Waiting for API deployment to complete..."
+        kubectl rollout status deployment/qetta-api -n qetta-production --timeout=8m
+        
+        if [ $? -ne 0 ]; then
+          echo "❌ API deployment failed or timed out"
+          exit 1
+        fi
+    
+    - name: Wait for Web deployment
+      id: wait-web
+      timeout-minutes: 10
+      run: |
+        echo "Waiting for Web deployment to complete..."
+        kubectl rollout status deployment/qetta-web -n qetta-production --timeout=8m
+        
+        if [ $? -ne 0 ]; then
+          echo "❌ Web deployment failed or timed out"
+          exit 1
+        fi
+    
+    - name: Health check API
+      id: health-api
+      run: |
+        echo "Performing API health check..."
+        sleep 10  # Wait for load balancer to update
+        
+        # Get a pod name
+        POD=$(kubectl get pod -n qetta-production -l component=api -o jsonpath='{.items[0].metadata.name}')
+        
+        # Check health endpoint
+        kubectl exec -n qetta-production $POD -- curl -f http://localhost:3001/health || {
+          echo "❌ API health check failed"
+          exit 1
+        }
+        
+        echo "✅ API health check passed"
+    
+    - name: Health check Web
+      id: health-web
+      run: |
+        echo "Performing Web health check..."
+        
+        # Get a pod name
+        POD=$(kubectl get pod -n qetta-production -l component=web -o jsonpath='{.items[0].metadata.name}')
+        
+        # Check if web is responding
+        kubectl exec -n qetta-production $POD -- curl -f http://localhost:3000/ || {
+          echo "❌ Web health check failed"
+          exit 1
+        }
+        
+        echo "✅ Web health check passed"
+    
+    - name: Run database migrations
+      id: migrate
+      run: |
+        echo "Running database migrations..."
+        kubectl exec -n qetta-production deployment/qetta-api -- npm run migrate:deploy || {
+          echo "⚠️  Database migration failed"
+          exit 1
+        }
+    
+    - name: Verify deployment
+      run: |
+        echo "=== Deployment Verification ==="
+        kubectl get pods -n qetta-production
+        kubectl get services -n qetta-production
+        kubectl get ingress -n qetta-production
+        
+        echo ""
+        echo "=== Pod Status ==="
+        kubectl get pods -n qetta-production -o wide
+        
+        echo ""
+        echo "=== Recent Events ==="
+        kubectl get events -n qetta-production --sort-by='.lastTimestamp' | tail -20
+    
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        echo "⚠️  Deployment failed! Initiating rollback..."
+        
+        # Rollback API if it was deployed
+        if [ "${{ steps.wait-api.outcome }}" == "failure" ] || [ "${{ steps.health-api.outcome }}" == "failure" ]; then
+          echo "Rolling back API deployment..."
+          kubectl rollout undo deployment/qetta-api -n qetta-production
+          kubectl rollout status deployment/qetta-api -n qetta-production --timeout=3m
+        fi
+        
+        # Rollback Web if it was deployed
+        if [ "${{ steps.wait-web.outcome }}" == "failure" ] || [ "${{ steps.health-web.outcome }}" == "failure" ]; then
+          echo "Rolling back Web deployment..."
+          kubectl rollout undo deployment/qetta-web -n qetta-production
+          kubectl rollout status deployment/qetta-web -n qetta-production --timeout=3m
+        fi
+        
+        echo "✅ Rollback completed"
+        echo "Current deployment state:"
+        kubectl get pods -n qetta-production
+
+  notify:
+    name: Send Deployment Notification
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Notify Slack
+      if: success()
+      uses: slackapi/slack-github-action@v1
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "✅ Deployment successful to production",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Deployment Status: SUCCESS* ✅\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}"
+                }
+              }
+            ]
+          }
+    
+    - name: Notify Slack on failure
+      if: failure()
+      uses: slackapi/slack-github-action@v1
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "❌ Deployment failed to production",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Deployment Status: FAILED* ❌\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}"
+                }
+              }
+            ]
+          }

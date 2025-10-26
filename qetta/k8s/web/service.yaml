@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: qetta-web
+  namespace: qetta-production
+  labels:
+    app: qetta
+    component: web
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3000
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: qetta
+    component: web
+  sessionAffinity: None

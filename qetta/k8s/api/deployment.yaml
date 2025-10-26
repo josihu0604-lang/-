@@ -1,0 +1,195 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qetta-api
+  namespace: qetta-production
+  labels:
+    app: qetta
+    component: api
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: qetta
+      component: api
+  template:
+    metadata:
+      labels:
+        app: qetta
+        component: api
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3001"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: qetta-api
+      
+      containers:
+      - name: api
+        image: ghcr.io/your-org/qetta-api:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - name: http
+          containerPort: 3001
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        
+        env:
+        - name: NODE_ENV
+          value: "production"
+        
+        - name: PORT
+          value: "3001"
+        
+        - name: LOG_LEVEL
+          value: "info"
+        
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: database-url
+        
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: redis-url
+        
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: jwt-secret
+        
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: encryption-key
+        
+        - name: TOSS_CLIENT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: toss-client-key
+        
+        - name: TOSS_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: toss-secret-key
+        
+        - name: NICE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: nice-client-id
+        
+        - name: NICE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: nice-secret-key
+        
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: sentry-dsn
+              optional: true
+        
+        - name: DATADOG_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: datadog-api-key
+              optional: true
+        
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        volumeMounts:
+        - name: pdf-storage
+          mountPath: /app/pdfs
+        - name: tmp
+          mountPath: /tmp
+        
+        # Security context for container
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: false  # PDFKit needs write access
+          capabilities:
+            drop:
+            - ALL
+      
+      volumes:
+      - name: pdf-storage
+        persistentVolumeClaim:
+          claimName: qetta-pdf-storage
+      - name: tmp
+        emptyDir:
+          sizeLimit: 500Mi  # Limit tmp directory size
+      
+      # Pod security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - api
+              topologyKey: kubernetes.io/hostname
+      
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000

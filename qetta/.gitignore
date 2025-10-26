@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Environment
+.env.local
+
+# Logs
+*.log
+
+# Screenshots
+screenshots/

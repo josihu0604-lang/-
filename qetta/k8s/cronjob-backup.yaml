@@ -1,0 +1,98 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: qetta-database-backup
+  namespace: qetta-production
+spec:
+  # Run daily at 2 AM KST (17:00 UTC)
+  schedule: "0 17 * * *"
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: qetta
+            component: backup
+        spec:
+          serviceAccountName: qetta-backup
+          restartPolicy: OnFailure
+          
+          containers:
+          - name: backup
+            image: google/cloud-sdk:alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              BACKUP_FILE="qetta_backup_${TIMESTAMP}.sql.gz"
+              
+              echo "Starting backup at $(date)"
+              
+              # Perform database backup
+              kubectl exec -n qetta-production \
+                $(kubectl get pod -n qetta-production -l component=database -o jsonpath='{.items[0].metadata.name}') \
+                -- pg_dump -U ${POSTGRES_USER} -d qetta | gzip > /tmp/${BACKUP_FILE}
+              
+              # Upload to GCS
+              gsutil cp /tmp/${BACKUP_FILE} gs://qetta-backups/database/
+              
+              echo "Backup completed: ${BACKUP_FILE}"
+              
+              # Clean up old backups (keep last 30 days)
+              gsutil ls gs://qetta-backups/database/ | \
+                grep -v $(date +%Y%m -d '30 days ago') | \
+                xargs -r gsutil rm
+            
+            env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            
+            volumeMounts:
+            - name: gcs-credentials
+              mountPath: /secrets/gcs
+              readOnly: true
+          
+          volumes:
+          - name: gcs-credentials
+            secret:
+              secretName: gcs-backup-credentials
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: qetta-backup
+  namespace: qetta-production
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: qetta-backup-role
+  namespace: qetta-production
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/exec"]
+  verbs: ["get", "list", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: qetta-backup-rolebinding
+  namespace: qetta-production
+subjects:
+- kind: ServiceAccount
+  name: qetta-backup
+  namespace: qetta-production
+roleRef:
+  kind: Role
+  name: qetta-backup-role
+  apiGroup: rbac.authorization.k8s.io
