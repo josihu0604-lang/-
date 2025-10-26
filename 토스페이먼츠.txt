@@ -1,0 +1,41 @@
+토스페이먼츠
+ID= assembcho@gmail.com
+PW= Abc0315!
+
+
+
+금융결제원 오픈API 개발자사이트
+ID= assembcho@gmail.com
+PW= Gede0603!!
+
+Client ID= d45b5d59-e571-436a-9675-aa5048e09489
+Client Secret= 8dc9537a-395b-46a5-90db-8d362a7fde6f
+
+OpenBanking Callback
+https://testapi.openbanking.or.kr/oauth/2.0/authorize?response_type=code
+&client_id=d45b5d59-e571-436a-9675-aa5048e09489
+&redirect_uri=https%3A%2F%2Fearnest-mandazi-7b1555.netlify.app%2Foauth%2Fkftc%2Fcallback
+&scope=login%20inquiry
+&state=01234567890123456789012345678912
+&auth_type=0
+
+code=zx5NdviC055Voz7ELgxkJKHO2Z4HNE
+state=01234567890123456789012345678912
+scope=inquiry login
+
+토큰 교환 성공
+access_token  : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMTAxMDczMzg5Iiwic2NvcGUiOlsiaW5xdWlyeSIsImxvZ2luIl0sIm
+                lzcyI6Imh0dHBzOi8vd3d3Lm9wZW5iYW5raW5nLm9yLmtyIiwiZXhwIjoxNzY5MDQzNDI1LCJqdGkiOiIxM2Q5ZmUzOS05ODRkLTRkZ
+                TctYTJhZi1lZjgyZTE5Y2YyNDgifQ.CbMORzFN54kkxtT324Aun9ganc7TzBkLTbNrl8oH_q0
+token_type    : Bearer
+refresh_token : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiIxMTAxMDczMzg5Iiwic2NvcGUiOlsiaW5xdWlyeSIsImxvZ2luIl0sIm
+                lzcyI6Imh0dHBzOi8vd3d3Lm9wZW5iYW5raW5nLm9yLmtyIiwiZXhwIjoxNzY5OTA3NDI1LCJqdGkiOiJkNTFhODA3OC04YjBhLTQyM
+                mQtOTBlYS05ZjI3YmY4YzFkNDAifQ.K-QPemcCRsE0hzWwBugAggc6zuE--L7iS358I1efMDE
+expires_in    : 7775999
+scope         : inquiry login
+user_seq_no   : 1101073389
+
+
+nelify
+ID= qettapay@gmail.com
+PW= Abc0315!

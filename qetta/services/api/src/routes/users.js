@@ -1,0 +1,1 @@
+const { prisma }=require('../prisma'); module.exports=async function(app){ app.get('/users/me', async(req,reply)=>{ if(!req.userId) return reply.code(401).send({error:'UNAUTHORIZED'}); const u=await prisma.user.findUnique({ where:{ id:req.userId }, select:{ id:true,email:true,createdAt:true } }); return { user:u }; }); };

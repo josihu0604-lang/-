@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+compose(){ if docker compose version >/dev/null 2>&1; then docker compose "$@"; else docker-compose "$@"; fi; }
+case "${1:-}" in
+  up)
+    compose -f "$ROOT/infra/docker-compose.full.yml" up -d --build db redis
+    compose -f "$ROOT/infra/docker-compose.full.yml" up migrate
+    compose -f "$ROOT/infra/docker-compose.full.yml" up -d api web
+    for i in {1..120}; do code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || true); [ "$code" = "200" ] && break; sleep 1; done
+    [ "$code" = "200" ] && echo "HEALTH=OK" || (echo "HEALTH=FAIL"; exit 1)
+    ;;
+  down)
+    compose -f "$ROOT/infra/docker-compose.full.yml" down -v
+    ;;
+  smoke)
+    bash "$ROOT/scripts/smoke.sh"
+    ;;
+  *)
+    echo "Usage: codex {up|down|smoke}"; exit 0
+    ;;
+esac

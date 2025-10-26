@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>qetta · 오픈뱅킹 OAuth 스모크 (로컬 콜백 A안) 초간단 가이드</title>
+<style>
+  :root {
+    --bg: #0f172a; /* slate-900 */
+    --panel: #111827; /* gray-900 */
+    --muted: #94a3b8; /* slate-400 */
+    --text: #e5e7eb; /* gray-200 */
+    --accent: #10b981; /* emerald-500 */
+    --warning: #f59e0b; /* amber-500 */
+    --danger: #ef4444; /* red-500 */
+    --code: #0b1020;
+    --border: #1f2937;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Apple SD Gothic Neo, "Helvetica Neue", Arial, "Segoe UI Emoji";
+    background: linear-gradient(180deg, var(--bg), #0b1220 60%);
+    color: var(--text); line-height: 1.6;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 64px; }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  .tagline { color: var(--muted); }
+  .card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 20px; margin: 16px 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    backdrop-filter: blur(8px);
+  }
+  h2 { font-size: 22px; margin: 24px 0 8px; }
+  h3 { font-size: 18px; margin: 16px 0 6px; }
+  ol, ul { padding-left: 20px; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  pre {
+    background: var(--code); color: #e2e8f0; padding: 14px; border-radius: 12px;
+    overflow: auto; border: 1px solid #1e293b;
+  }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    background: rgba(16,185,129,0.15); color: #a7f3d0; border: 1px solid rgba(16,185,129,0.4);
+    font-size: 12px; margin-left: 8px; vertical-align: middle;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); padding: 10px 12px; background: rgba(16,185,129,0.08);
+    border-radius: 8px; color: #d1fae5; margin: 12px 0;
+  }
+  .warn {
+    border-left: 4px solid var(--warning); background: rgba(245,158,11,0.08); color: #fef3c7;
+  }
+  .danger {
+    border-left: 4px solid var(--danger); background: rgba(239,68,68,0.08); color: #fecaca;
+  }
+  a { color: #93c5fd; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .grid-2 {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;
+  }
+  .kbd { padding: 2px 6px; border: 1px solid #374151; border-bottom-width: 3px; border-radius: 6px; background: #0b1220; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>qetta · 오픈뱅킹 OAuth 스모크 (로컬 콜백 A안)</h1>
+      <div class="tagline">“복붙 → 엔터”로 끝내는 <b>Authorization Code</b> 흐름 + 잔액 API 스모크</div>
+      <div class="callout">전제: KFTC 테스트베드에서 <b>Callback URL</b> 등록 완료 (예: <code>http://localhost:3000/oauth/kftc/callback</code>)</div>
+    </header>
+
+    <section class="card" id="map">
+      <h2>한 장 흐름도</h2>
+      <ol>
+        <li>브라우저로 <b>/authorize</b> 접속 → 사용자 동의</li>
+        <li>오픈뱅킹이 등록된 <b>redirect_uri</b>로 <code>?code=...</code> 전달</li>
+        <li>서버에서 <b>/token</b>으로 <code>code</code>를 <b>access_token</b>으로 교환</li>
+        <li>(계좌등록확인) 핀테크이용번호(24자리) 매핑</li>
+        <li><b>access_token + 핀테크이용번호</b>로 잔액/거래 API 스모크</li>
+      </ol>
+      <div class="callout warn"><b>중요:</b> <code>redirect_uri</code>는 콘솔에 등록된 값과 <b>문자 하나까지</b> 동일해야 합니다.</div>
+    </section>
+
+    <section class="card" id="prep">
+      <h2>0) 준비물</h2>
+      <ul>
+        <li>KFTC 테스트베드 → <b>MY PAGE → API Key 관리</b>에서 <b>Client ID / Client Secret</b> 확인</li>
+        <li>Callback URL 등록 완료 (예: <code>http://localhost:3000/oauth/kftc/callback</code>)</li>
+      </ul>
+    </section>
+
+    <section class="card" id="server">
+      <h2>1) 콜백 받는 <span class="pill">초미니 서버</span> 띄우기</h2>
+      <div class="grid-2">
+        <div>
+          <h3>터미널</h3>
+          <pre><code>mkdir kftc-callback &amp;&amp; cd kftc-callback
+npm init -y &amp;&amp; npm i express</code></pre>
+        </div>
+        <div>
+          <h3>server.js</h3>
+          <pre><code>const express = require('express');
+const app = express();
+app.get('/oauth/kftc/callback', (req, res) =&gt; {
+  const { code, state, scope } = req.query;
+  console.log('[CALLBACK] code=', code, 'state=', state, 'scope=', scope);
+  res.send(`&lt;h2&gt;OpenBanking Callback&lt;/h2&gt;&lt;pre&gt;code=${code}\nstate=${state}\nscope=${scope}&lt;/pre&gt;`);
+});
+app.listen(3000, () =&gt; console.log('✅ 콜백 서버 준비: http://localhost:3000'));</code></pre>
+        </div>
+      </div>
+      <h3>실행</h3>
+      <pre><code>node server.js</code></pre>
+      <div class="callout">터미널에 <b>“콜백 서버 준비”</b>가 보이면 OK.</div>
+    </section>
+
+    <section class="card" id="authorize">
+      <h2>2) 사용자 인가 → <code>code</code> 받기</h2>
+      <p>아래 URL을 한 줄로 브라우저에 붙여넣고, <code>YOUR_CLIENT_ID</code>만 바꿔 실행:</p>
+      <pre><code>https://testapi.openbanking.or.kr/oauth/2.0/authorize?response_type=code&amp;client_id=YOUR_CLIENT_ID&amp;redirect_uri=http://localhost:3000/oauth/kftc/callback&amp;scope=login%20inquiry&amp;state=RANDOM123</code></pre>
+      <ul>
+        <li><b>response_type=code</b>: “코드 방식” 의미</li>
+        <li><b>scope</b>: 잔액/거래 조회엔 최소 <code>inquiry</code> 필요 (처음엔 <code>login inquiry</code> 함께 권장)</li>
+        <li><b>state</b>: 내가 만든 난수(요청/응답 일치 확인)</li>
+      </ul>
+      <div class="callout">동의 완료 시 우리 콜백으로 <code>?code=...</code> 도착 → 터미널에 <b>[CALLBACK] code=</b>가 찍힙니다.</div>
+    </section>
+
+    <section class="card" id="token">
+      <h2>3) <code>code → access_token</code> 교환</h2>
+      <pre><code>curl -X POST https://testapi.openbanking.or.kr/oauth/2.0/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=authorization_code" \
+  -d "client_id=YOUR_CLIENT_ID" \
+  -d "client_secret=YOUR_CLIENT_SECRET" \
+  -d "redirect_uri=http://localhost:3000/oauth/kftc/callback" \
+  -d "code=여기에_방금_복사한_CODE_붙여넣기"</code></pre>
+      <p>응답 JSON 안의 <code>&quot;access_token&quot;:&quot;...긴문자열...&quot;</code> 값을 복사해 두세요.</p>
+    </section>
+
+    <section class="card" id="fintech">
+      <h2>4) 핀테크이용번호(24자리) 이해</h2>
+      <ul>
+        <li>사용자 계좌를 등록/연결하면 오픈뱅킹이 계좌에 <b>핀테크이용번호(24자리)</b>를 부여</li>
+        <li>이후 잔액/거래 조회는 계좌번호 대신 이 번호로 호출</li>
+        <li>테스트베드에선 동의 &amp; 계좌등록확인 절차를 거치면 매핑됨</li>
+      </ul>
+      <div class="callout">지금은 스모크 단계: 토큰까지 확보했다면, 테스트용 <b>핀테크이용번호</b>로 잔액 API를 바로 호출해보면 됩니다.</div>
+    </section>
+
+    <section class="card" id="balance">
+      <h2>5) 잔액 조회 스모크</h2>
+      <pre><code>curl "https://openapi.openbanking.or.kr/v2.0/account/balance/fin_num?fintech_use_num=FINTECH_24&amp;bank_tran_id=YOURBANK1234567890&amp;tran_dtime=20251024120000" \
+  -H "Authorization: Bearer ACCESS_TOKEN"</code></pre>
+      <ul>
+        <li><code>FINTECH_24</code>: 24자리 핀테크이용번호</li>
+        <li><code>ACCESS_TOKEN</code>: 3단계에서 받은 토큰</li>
+        <li><code>bank_tran_id</code>: 호출 식별자(영문/숫자 20자 내외)</li>
+        <li><code>tran_dtime</code>: 시각(YYYYMMDDhhmmss)</li>
+      </ul>
+      <p>정상 응답이 오면 스모크 완료! 거래내역은 <code>/v2.0/account/transaction_list/fin_num</code>로 유사하게 호출합니다.</p>
+      <div class="callout danger"><b>자주 막히는 부분</b><br/>
+        • <b>redirect_uri 불일치</b> → 등록값과 요청이 100% 같아야 함<br/>
+        • <b>scope 부족</b> → 잔액/거래는 최소 <code>inquiry</code><br/>
+        • <b>호스트 혼동</b> → 테스트는 <code>testapi.openbanking.or.kr</code>, 운영/문서는 <code>openapi.openbanking.or.kr</code>
+      </div>
+    </section>
+
+    <section class="card" id="env">
+      <h2>.env 템플릿 (제안)</h2>
+      <pre><code>KFTC_CLIENT_ID=...
+KFTC_CLIENT_SECRET=...
+KFTC_REDIRECT_URI=http://localhost:3000/oauth/kftc/callback
+KFTC_SCOPE="login inquiry"</code></pre>
+    </section>
+
+    <footer>
+      © 2025 qetta · 본 문서는 테스트베드 스모크 가이드입니다. 실제 운영 전에는 보안/컴플라이언스 요건을 별도로 검토하세요.
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>토스인증 연동 — 비전문가용 초간단 가이드</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #0f172a;
+      --muted: #94a3b8;
+      --text: #e5e7eb;
+      --accent: #10b981;
+      --danger: #ef4444;
+      --code: #0b1220;
+      --border: #1f2a44;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+      line-height: 1.6;
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 80% -10%, #10213a 0%, var(--bg) 45%);
+    }
+    header {
+      padding: 40px 20px 10px;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: -0.3px;
+    }
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .container { max-width: 960px; margin: 0 auto; padding: 20px; }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin: 14px 0;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+    h2, h3 { letter-spacing: -0.2px; }
+    h2 { margin: 16px 0 8px; font-size: 22px; }
+    h3 { margin: 14px 0 8px; font-size: 18px; color: #c7d2fe; }
+    .step { border-left: 4px solid var(--accent); padding-left: 14px; }
+    .muted { color: var(--muted); }
+    .checklist li { margin: 6px 0; }
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+    }
+    pre {
+      background: var(--code);
+      color: #e2e8f0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      overflow-x: auto;
+    }
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      border: 1px solid var(--border);
+      border-bottom-width: 3px;
+      border-radius: 6px;
+      font-size: 12px;
+      background: #0b1324;
+      color: #dbeafe;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 12px;
+      color: #cbd5e1;
+      background: #0a1322;
+      margin-left: 6px;
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 12px; }
+    details { background: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 10px 12px; }
+    details summary { cursor: pointer; }
+    .warning { color: var(--danger); font-weight: 600; }
+    footer { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 0 50px; }
+    .ok { color: #86efac; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>토스인증 연동 — 비전문가용 초간단 가이드</h1>
+    <p>“문 앞 경비에게 <span class="kbd">출입증</span>을 받고, 그걸 들고 <span class="kbd">업무 창구</span>로 간다”는 비유로 3단계면 끝!</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>한눈에 요약 (3단계)</h2>
+      <ol class="checklist">
+        <li><b>주소 저장</b>: 출입증 받는 곳(<code>oauth2.cert.toss.im</code>) + 업무 API(<code>cert.toss.im</code>)</li>
+        <li><b>방화벽 열기</b>: 우리 서버 → 토스 서버로 <b>443 포트</b> 아웃바운드 허용</li>
+        <li><b>출입증(Access Token) 받기</b>: <span class="kbd">POST /token</span> 호출 → 토큰 얻으면 연결 완료</li>
+      </ol>
+    </div>
+
+    <div class="card step">
+      <h2>① 주소 두 개만 기억해요</h2>
+      <p class="muted">.env 파일에 그대로 붙여넣으면 개발/운영 어디서든 재사용하기 편해요.</p>
+      <pre><code># .env (예시)
+TOSS_OAUTH_BASE=https://oauth2.cert.toss.im   # 출입증(Access Token) 받는 곳
+TOSS_API_BASE=https://cert.toss.im            # 본인확인/간편인증/전자서명 API</code></pre>
+
+      <div class="grid">
+        <div class="card">
+          <h3>왜 두 개인가요?</h3>
+          <p>보안과 구조를 나누기 위해서예요. <b>토큰 발급</b>은 전용 주소(<code>oauth2...</code>), <b>업무 API</b>는 별도 주소(<code>cert...</code>)로 분리돼요.</p>
+        </div>
+        <div class="card">
+          <h3>마이데이터도 쓰나요?</h3>
+          <p>마이데이터 통합인증은 별도 호스트 <code>https://mydata.cert.toss.im</code>을 사용해요<span class="tag">선택</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card step">
+      <h2>② 방화벽(아웃바운드) 허용</h2>
+      <p>우리 서버가 토스 서버로 <b>나가는</b> 통신을 허용해야 해요. 포트는 전부 <b>443</b> (HTTPS).</p>
+      <div class="grid">
+        <div class="card">
+          <h3>본인확인/간편/전자서명</h3>
+          <pre><code>117.52.3.222
+117.52.3.235
+211.115.96.222
+211.115.96.235
+# port: 443 (HTTPS)</code></pre>
+        </div>
+        <div class="card">
+          <h3>마이데이터(선택)</h3>
+          <pre><code>117.52.3.221
+211.115.96.221
+# port: 443 (HTTPS)</code></pre>
+        </div>
+      </div>
+      <p class="muted">※ 인바운드는 토스 쪽이 열어둡니다. 우리가 따로 받을 것은 없어요.</p>
+    </div>
+
+    <div class="card step">
+      <h2>③ 출입증(Access Token) 받아보기 — <span class="ok">이거 한 번 되면 연결 OK</span></h2>
+      <p><b>테스트 전용</b> 자격증명(client_id/client_secret)을 사용해 <code>POST /token</code>을 호출합니다.</p>
+      <details>
+        <summary>테스트 자격증명 보기</summary>
+        <pre><code>client_id     = test_a8e23336d673ca70922b485fe806eb2d
+client_secret = test_418087247d66da09fda1964dc4734e453c7cf66a7a9e3</code></pre>
+        <p class="muted">운영 전환 시에는 발급받은 실제 <code>client_id</code>/<code>client_secret</code>으로 교체하세요.</p>
+      </details>
+
+      <h3>방법 A) cURL로 바로 테스트</h3>
+      <pre><code>curl -X POST https://oauth2.cert.toss.im/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials&amp;scope=ca&amp;client_id=test_a8e23336d673ca70922b485fe806eb2d&amp;client_secret=test_418087247d66da09fda1964dc4734e453c7cf66a7a9e3"</code></pre>
+
+      <h3>방법 B) Node.js(fetch) 예시</h3>
+      <pre><code>import fetch from "node-fetch";
+
+const OAUTH_BASE = process.env.TOSS_OAUTH_BASE || "https://oauth2.cert.toss.im";
+const params = new URLSearchParams({
+  grant_type: "client_credentials",
+  scope: "ca",
+  client_id: "test_a8e23336d673ca70922b485fe806eb2d",
+  client_secret: "test_418087247d66da09fda1964dc4734e453c7cf66a7a9e3",
+});
+
+const res = await fetch(`${OAUTH_BASE}/token`, {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: params.toString(),
+});
+
+const json = await res.json();
+console.log(json); // { access_token: "...", token_type: "Bearer", expires_in: 3600, ... }</code></pre>
+
+      <h3>응답이 이렇게 나오면 성공!</h3>
+      <pre><code>{
+  "access_token": "eyJhbGciOi...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}</code></pre>
+
+      <p>이제 API 호출마다 아래 헤더 한 줄만 추가하면 됩니다.</p>
+      <pre><code>Authorization: Bearer &lt;access_token&gt;</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>다음 단계: 실제 API 호출 예시(구조만 이해)</h2>
+      <p class="muted">각 업무별(본인확인/간편인증/전자서명) <b>엔드포인트 경로</b>는 해당 기능 문서를 따라갑니다. 공통 패턴은 동일해요.</p>
+      <pre><code># 예) 결과 조회 호출(구조 예시)
+GET https://cert.toss.im/{service}/v1/{resource}/{id}
+Authorization: Bearer &lt;access_token&gt;
+Content-Type: application/json</code></pre>
+
+      <details>
+        <summary>개인정보(주민/연락처 등) 포함 요청이 있다면?</summary>
+        <p>개인정보를 직접 실어 보내는 요청/응답은 <b>세션키 생성 → 암·복호화(RSA-OAEP)</b> 절차가 필요합니다. 표준창(브라우저/앱 화면) 방식은 요청에 개인정보를 싣지 않으므로 대체로 암호화 없이 진행되지만, <b>결과 조회</b>에서는 세션키 사용이 요구될 수 있어요. 토스에서 제공하는 샘플/SDK를 참고하세요.</p>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>문제 해결 (빠른 체크)</h2>
+      <ul class="checklist">
+        <li><b>Timeout / 연결 실패</b> → 방화벽 아웃바운드 IP/포트(443) 허용했는지 확인</li>
+        <li><b>401 Unauthorized</b> → <code>client_id/secret</code> 오타, 혹은 헤더 <code>Authorization: Bearer ...</code> 누락</li>
+        <li><b>400 Bad Request</b> → <code>grant_type</code> 또는 <code>Content-Type: application/x-www-form-urlencoded</code> 누락</li>
+        <li><b>TLS 에러</b> → 서버가 TLS 1.2 이상 사용 중인지 확인</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>최종 체크리스트</h2>
+      <ul class="checklist">
+        <li><span class="ok">✅</span> <code>TOSS_OAUTH_BASE</code>, <code>TOSS_API_BASE</code> 설정</li>
+        <li><span class="ok">✅</span> 아웃바운드 방화벽: 위 IP + 443 허용</li>
+        <li><span class="ok">✅</span> <code>POST /token</code> 성공 → <code>access_token</code> 확보</li>
+        <li><span class="ok">✅</span> 이후 API에 <code>Authorization: Bearer &lt;token&gt;</code> 적용</li>
+      </ul>
+      <p class="muted">여기까지 되면 “연결 성공”입니다. 실제 업무 플로우(본인확인/전자서명 등)는 해당 문서의 엔드포인트만 이어 붙이면 돼요.</p>
+    </div>
+
+    <footer>
+      <p>Made for non‑experts · 최소 개념 + 바로 되는 예시로 구성 · 운영 전환 시에는 실 운영 자격증명으로 교체하세요.</p>
+    </footer>
+  </div>
+</body>
+</html>
