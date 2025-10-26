@@ -1,50 +1,166 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+generator client {
+  provider = "prisma-client-js"
+}
 
-enum SubscriptionTier { FREE STARTER PRO ENTERPRISE }
-enum SubscriptionStatus { ACTIVE CANCELLED PAST_DUE TRIALING }
-enum DocumentType { UNKNOWN STATEMENT AGREEMENT INVOICE }
-enum ExternalProvider { TOSS_CERT KFTC_OPENBANKING }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== ENUMS =====
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+}
+
+enum DocumentType {
+  UNKNOWN
+  STATEMENT
+  AGREEMENT
+  INVOICE
+}
+
+enum ExternalProvider {
+  TOSS_CERT
+  KFTC_OPENBANKING
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  LOAN
+  CREDIT_CARD
+  INSTALLMENT_SAVINGS
+  DEPOSIT
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+}
+
+enum TransactionCategory {
+  INCOME
+  EXPENSE
+  TRANSFER
+  LOAN_REPAYMENT
+  LOAN_DISBURSEMENT
+  INTEREST_EARNED
+  INTEREST_PAID
+  FEE
+  OTHER
+}
+
+enum DebtAnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum CreditGrade {
+  AAA
+  AA
+  A
+  BBB
+  BB
+  B
+  CCC
+  CC
+  C
+  D
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum PlanType {
+  SHINBOK_PRE_WORKOUT
+  FRESH_START_FUND
+  INDIVIDUAL_RECOVERY
+  INDIVIDUAL_BANKRUPTCY
+  CREDIT_ADJUSTMENT
+  CUSTOM
+}
+
+enum ApplicationType {
+  SHINBOK_PRE_WORKOUT
+  FRESH_START_FUND
+  INDIVIDUAL_RECOVERY
+  INDIVIDUAL_BANKRUPTCY
+}
+
+enum ApplicationStatus {
+  DRAFT
+  PENDING_DOCUMENTS
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  COMPLETED
+}
+
+// ===== MODELS =====
 
 model User {
-  id            String   @id @default(uuid()) @db.Uuid
-  email         String   @unique
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique
   password      String
-  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
   tokens        ApiToken[]
   subscription  Subscription?
   usage         UsageRecord[]
   verifications Verification[]
   documents     Document[]
   externalAuths ExternalAuth[]
+  bankAccounts  BankAccount[]
+  debtAnalyses  DebtAnalysis[]
+  applications  Application[]
 }
 
 model ApiToken {
-  id         String   @id @default(uuid()) @db.Uuid
-  userId     String   @db.Uuid
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String
-  token      String   @unique
-  scopes     String[] @default([])
+  token      String    @unique
+  scopes     String[]  @default([])
   lastUsedAt DateTime?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
+
   @@index([userId])
   @@index([token])
 }
 
 model Subscription {
-  id                   String   @id @default(uuid()) @db.Uuid
-  userId               String   @unique @db.Uuid
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @unique @db.Uuid
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   tier                 SubscriptionTier
   status               SubscriptionStatus
   currentPeriodStart   DateTime
   currentPeriodEnd     DateTime
-  cancelAtPeriodEnd    Boolean  @default(false)
-  stripeCustomerId     String?  @unique
-  stripeSubscriptionId String?  @unique
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  cancelAtPeriodEnd    Boolean            @default(false)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   @@index([status])
   @@index([currentPeriodEnd])
@@ -58,28 +174,31 @@ model UsageRecord {
   count        Int      @default(1)
   billingMonth String
   createdAt    DateTime @default(now())
+
   @@unique([userId, resourceType, billingMonth])
   @@index([userId, billingMonth])
 }
 
 model Verification {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  issues          Json
-  metrics         Json
-  severityCounts  Json
-  createdAt       DateTime @default(now())
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issues         Json
+  metrics        Json
+  severityCounts Json
+  createdAt      DateTime @default(now())
+
   @@index([userId, createdAt(sort: Desc)])
 }
 
 model Document {
-  id         String       @id @default(uuid()) @db.Uuid
-  userId     String       @db.Uuid
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type       DocumentType @default(UNKNOWN)
-  metadata   Json?
-  uploadedAt DateTime     @default(now())
+  id                   String                @id @default(uuid()) @db.Uuid
+  userId               String                @db.Uuid
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                 DocumentType          @default(UNKNOWN)
+  metadata             Json?
+  uploadedAt           DateTime              @default(now())
+  applicationDocuments ApplicationDocument[]
 }
 
 model ExternalAuth {
@@ -99,4 +218,153 @@ model ExternalAuth {
   @@unique([userId, provider])
   @@index([userId])
   @@index([provider])
+}
+
+model BankAccount {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @db.Uuid
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       ExternalProvider
+  fintechUseNum  String?
+  bankCode       String
+  bankName       String
+  accountNumber  String
+  accountType    AccountType
+  accountName    String?
+  balance        Decimal          @db.Decimal(15, 2)
+  currency       String           @default("KRW")
+  interestRate   Decimal?         @db.Decimal(5, 2)
+  monthlyPayment Decimal?         @db.Decimal(15, 2)
+  dueDate        DateTime?
+  maturityDate   DateTime?
+  status         AccountStatus    @default(ACTIVE)
+  lastSyncedAt   DateTime?
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  transactions   Transaction[]
+
+  @@index([userId])
+  @@index([provider])
+  @@index([accountType])
+  @@index([lastSyncedAt])
+}
+
+model Transaction {
+  id              String              @id @default(uuid()) @db.Uuid
+  accountId       String              @db.Uuid
+  account         BankAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactionDate DateTime
+  amount          Decimal             @db.Decimal(15, 2)
+  balanceAfter    Decimal             @db.Decimal(15, 2)
+  description     String
+  category        TransactionCategory @default(OTHER)
+  merchantName    String?
+  providerTxId    String
+  metadata        Json?
+  createdAt       DateTime            @default(now())
+
+  @@unique([accountId, providerTxId])
+  @@index([accountId, transactionDate(sort: Desc)])
+  @@index([transactionDate])
+  @@index([category])
+}
+
+model DebtAnalysis {
+  id                 String              @id @default(uuid()) @db.Uuid
+  userId             String              @db.Uuid
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monthlyIncome      Decimal             @db.Decimal(15, 2)
+  otherDebts         Json?
+  totalDebt          Decimal             @db.Decimal(15, 2)
+  totalAssets        Decimal?            @db.Decimal(15, 2)
+  monthlyPayment     Decimal             @db.Decimal(15, 2)
+  dti                Decimal             @db.Decimal(10, 2)
+  dsr                Decimal?            @db.Decimal(10, 2)
+  creditScore        Int?
+  creditGrade        CreditGrade?
+  riskLevel          RiskLevel           @default(MEDIUM)
+  breakdown          Json
+  recommendations    Json
+  eligiblePrograms   String[]
+  status             DebtAnalysisStatus  @default(PENDING)
+  analyzedAt         DateTime?
+  errorMessage       String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  restructuringPlans RestructuringPlan[]
+  applications       Application[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+}
+
+model RestructuringPlan {
+  id                   String        @id @default(uuid()) @db.Uuid
+  analysisId           String        @db.Uuid
+  analysis             DebtAnalysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  planType             PlanType
+  planName             String
+  planDescription      String?       @db.Text
+  adjustedPayment      Decimal       @db.Decimal(15, 2)
+  adjustedInterestRate Decimal?      @db.Decimal(5, 2)
+  estimatedPeriod      Int
+  totalSavings         Decimal?      @db.Decimal(15, 2)
+  debtReductionRate    Decimal?      @db.Decimal(5, 2)
+  conditions           Json
+  requirements         Json
+  pros                 String[]
+  cons                 String[]
+  isRecommended        Boolean       @default(false)
+  priority             Int           @default(0)
+  createdAt            DateTime      @default(now())
+  applications         Application[]
+
+  @@index([analysisId])
+  @@index([planType])
+  @@index([isRecommended])
+}
+
+model Application {
+  id                String                @id @default(uuid()) @db.Uuid
+  userId            String                @db.Uuid
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysisId        String                @db.Uuid
+  analysis          DebtAnalysis          @relation(fields: [analysisId], references: [id], onDelete: Restrict)
+  planId            String                @db.Uuid
+  plan              RestructuringPlan     @relation(fields: [planId], references: [id], onDelete: Restrict)
+  applicationType   ApplicationType
+  status            ApplicationStatus     @default(DRAFT)
+  applicationNumber String?               @unique
+  formData          Json
+  pdfPath           String?
+  pdfGeneratedAt    DateTime?
+  submissionRef     String?
+  submittedAt       DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   Json?
+  notes             String?               @db.Text
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  documents         ApplicationDocument[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+  @@index([applicationType])
+}
+
+model ApplicationDocument {
+  id            String      @id @default(uuid()) @db.Uuid
+  applicationId String      @db.Uuid
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  documentId    String      @db.Uuid
+  document      Document    @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  documentType  String
+  isRequired    Boolean     @default(false)
+  isVerified    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId])
+  @@index([documentId])
 }

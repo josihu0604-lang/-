@@ -1,0 +1,21 @@
+{
+  "name": "@qetta/debt-analyzer",
+  "version": "1.0.0",
+  "description": "Debt analysis engine for qetta - calculates DTI, DSR, and generates restructuring recommendations",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": ["debt", "analysis", "DTI", "DSR", "restructuring"],
+  "author": "qetta",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.0"
+  }
+}

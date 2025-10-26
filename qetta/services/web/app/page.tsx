@@ -1,11 +1,15 @@
+import PlanCard from '../components/PlanCard'
+
 export default function Page(){
-  return (<div>
-    <h1 style={{fontSize:32,fontWeight:700,letterSpacing:-0.2}}>qetta — 3분 진단</h1>
-    <p style={{color:'#666',marginTop:8}}>채무/서류의 이상을 빠르게 찾아내어 시간을 절약하세요.</p>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:12, marginTop:24}}>
-      <div style={{border:'1px solid #eee',borderRadius:8,padding:16}}><div>STARTER</div><div style={{fontSize:24,fontWeight:600}}>₩29,000</div></div>
-      <div style={{border:'1px solid #eee',borderRadius:8,padding:16}}><div>PRO</div><div style={{fontSize:24,fontWeight:600}}>₩199,000</div></div>
-      <div style={{border:'1px solid #eee',borderRadius:8,padding:16}}><div>ENTERPRISE</div><div style={{fontSize:24,fontWeight:600}}>협의</div></div>
+  return (
+    <div>
+      <h1 className="text-4xl font-bold tracking-tight">qetta — 3분 진단</h1>
+      <p className="text-fg-muted mt-2">채무/서류의 이상을 빠르게 찾아내어 시간을 절약하세요.</p>
+      <div className="grid md:grid-cols-3 gap-5 mt-8">
+        <PlanCard tier="STARTER" price={29000} features={['월 100건 검증','이메일 지원','API 액세스']} />
+        <PlanCard tier="PRO" price={199000} features={['월 1,000건 검증','우선 지원','Webhook','대시보드']} />
+        <PlanCard tier="ENTERPRISE" price="협의" features={['무제한 검증','전담 매니저','SLA','커스텀 통합']} />
+      </div>
     </div>
-  </div>)
+  )
 }

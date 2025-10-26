@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --bg: #0B0F14;
+  --bg-elev: #111827;
+  --bg-muted: #0F172A;
+  --fg: #E5E7EB;
+  --fg-muted: #94A3B8;
+  --fg-inverted: #0B0F14;
+  --brand-primary: #22D3EE;
+  --brand-accent: #F97316;
+  --sev-crit: #EF4444;
+  --sev-warn: #F59E0B;
+  --sev-info: #22C55E;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.08);
+  --shadow-md: 0 3px 12px rgba(0,0,0,.15);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,.25);
+}
+
+html { color-scheme: dark; }
+body { @apply bg-bg text-fg antialiased; font-feature-settings:"tnum" 1, "cv10" 1; }
+.container { @apply max-w-6xl mx-auto px-4; }
+.card { @apply bg-bg-elev rounded-md shadow-md border border-white/5; }
+.badge { @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium; }
+.badge-crit { @apply badge bg-red-500/10 text-red-300; }
+.badge-warn { @apply badge bg-amber-500/10 text-amber-300; }
+.badge-info { @apply badge bg-emerald-500/10 text-emerald-300; }

@@ -1,1 +1,4 @@
-export default function Page(){ return <div>동의 설정(샘플)</div> }
+import ConsentToggle from '../../components/ConsentToggle'
+export default function Page(){
+  return <ConsentToggle />
+}
