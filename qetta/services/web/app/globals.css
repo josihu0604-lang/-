@@ -1,219 +1,49 @@
-/* Pretendard 한글 웹폰트 - 가독성 최적화된 모던 한글 폰트 */
+/* Pretendard 한글 웹폰트 - 가독성 최적화 */
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard-dynamic-subset.css');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ===== CSS Variables (Design Tokens) ===== */
 :root {
-  /* ===== 브랜드 컬러 - qetta 아이덴티티 ===== */
-  --brand-primary: #8b5cf6;           /* Purple - 주요 브랜드 컬러 */
-  --brand-primary-hover: #7c3aed;      /* Purple hover state */
-  --brand-secondary: #6366f1;          /* Indigo - 보조 브랜드 컬러 */
-  --brand-accent: #ec4899;             /* Pink - 강조 컬러 */
+  /* Brand Colors */
+  --brand-primary: #8b5cf6;
+  --brand-primary-hover: #7c3aed;
+  --brand-secondary: #6366f1;
+  --brand-accent: #ec4899;
   
-  /* ===== 배경 컬러 시스템 ===== */
-  --bg: #0f172a;                       /* Base background - slate-900 */
-  --bg-elev: #1e293b;                  /* Elevated surface - slate-800 */
-  --bg-muted: #334155;                 /* Muted background - slate-700 */
+  /* Background */
+  --bg: #0f172a;
+  --bg-elev: #1e293b;
+  --bg-muted: #334155;
   
-  /* ===== 전경/텍스트 컬러 ===== */
-  --fg: #f1f5f9;                       /* Primary text - slate-100 */
-  --fg-muted: #94a3b8;                 /* Muted text - slate-400 */
-  --fg-inverted: #0f172a;              /* Inverted text for light backgrounds */
+  /* Foreground */
+  --fg: #f1f5f9;
+  --fg-muted: #94a3b8;
   
-  /* ===== 상태/심각도 컬러 ===== */
-  --sev-crit: #ef4444;                 /* Critical/Error - red-500 */
-  --sev-warn: #f59e0b;                 /* Warning - amber-500 */
-  --sev-info: #10b981;                 /* Info - emerald-500 */
-  --sev-success: #22c55e;              /* Success - green-500 */
-  
-  /* ===== Border Radius ===== */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  
-  /* ===== Shadows ===== */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 3px 12px rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.25);
+  /* Status */
+  --sev-crit: #ef4444;
+  --sev-warn: #f59e0b;
+  --sev-info: #10b981;
+  --sev-success: #22c55e;
 }
 
 /* ===== Base Styles ===== */
-html { 
-  color-scheme: dark; 
+html {
+  color-scheme: dark;
+  font-feature-settings: "tnum" 1, "cv10" 1;
 }
 
-body { 
-  @apply bg-bg text-fg antialiased;
+body {
+  @apply bg-[#0f172a] text-[#f1f5f9] antialiased;
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
-  font-feature-settings: "tnum" 1, "cv10" 1;
   letter-spacing: -0.01em;
 }
 
-.container { 
-  @apply max-w-6xl mx-auto px-4; 
-}
+/* ===== Minimal Custom Utilities ===== */
 
-/* ===== Card Component System ===== */
-.card { 
-  @apply bg-bg-elev rounded-lg shadow-md border backdrop-blur-sm;
-  border-color: rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease-in-out;
-}
-
-.card:hover {
-  @apply shadow-lg;
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
-}
-
-.card-interactive {
-  @apply card cursor-pointer;
-}
-
-.card-interactive:hover {
-  @apply shadow-xl;
-  border-color: rgba(139, 92, 246, 0.5);
-  transform: translateY(-2px);
-}
-
-/* ===== Button System ===== */
-.btn {
-  @apply inline-flex items-center justify-center px-6 py-3 rounded-lg font-medium transition-all duration-200;
-  @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg;
-  @apply disabled:opacity-50 disabled:cursor-not-allowed;
-}
-
-.btn-primary {
-  @apply btn bg-brand-primary text-white hover:bg-brand-primary-hover;
-  @apply focus:ring-brand-primary shadow-md hover:shadow-lg;
-}
-
-.btn-secondary {
-  @apply btn bg-bg-elev text-fg border hover:bg-bg-muted;
-  @apply focus:ring-brand-secondary;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.btn-secondary:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.btn-accent {
-  @apply btn bg-brand-accent text-white hover:opacity-90;
-  @apply focus:ring-brand-accent shadow-md hover:shadow-lg;
-}
-
-.btn-ghost {
-  @apply btn text-fg hover:bg-bg-elev;
-  @apply focus:ring-brand-primary;
-}
-
-.btn-sm {
-  @apply px-4 py-2 text-sm;
-}
-
-.btn-lg {
-  @apply px-8 py-4 text-lg;
-}
-
-/* ===== Input System ===== */
-.input {
-  @apply w-full px-4 py-3 bg-bg-elev border rounded-lg;
-  @apply text-fg placeholder:text-fg-muted;
-  @apply focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent;
-  @apply transition-all duration-200;
-  @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.input-error {
-  @apply input border-sev-crit focus:ring-sev-crit;
-}
-
-.textarea {
-  @apply input resize-y min-h-[120px];
-}
-
-.select {
-  @apply input appearance-none cursor-pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
-  background-position: right 0.5rem center;
-  background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
-  padding-right: 2.5rem;
-}
-
-/* ===== Badge/Tag System ===== */
-.badge {
-  @apply inline-flex items-center px-4 py-2 text-sm font-medium rounded-full;
-  transition: all 0.2s ease-in-out;
-}
-
-.badge-primary {
-  @apply badge text-brand-primary border;
-  background-color: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.5);
-}
-
-.badge-secondary {
-  @apply badge text-fg-muted border;
-  background-color: rgba(51, 65, 85, 0.5);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.badge-accent {
-  @apply badge text-brand-accent border;
-  background-color: rgba(236, 72, 153, 0.2);
-  border-color: rgba(236, 72, 153, 0.5);
-}
-
-.badge-success {
-  @apply badge text-sev-success border;
-  background-color: rgba(34, 197, 94, 0.2);
-  border-color: rgba(34, 197, 94, 0.5);
-}
-
-.badge-crit {
-  @apply badge text-sev-crit border;
-  background-color: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.5);
-}
-
-.badge-warn {
-  @apply badge text-sev-warn border;
-  background-color: rgba(245, 158, 11, 0.2);
-  border-color: rgba(245, 158, 11, 0.5);
-}
-
-.badge-info {
-  @apply badge text-sev-info border;
-  background-color: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.5);
-}
-
-/* ===== Gradient Text ===== */
-.gradient-text {
-  @apply bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent bg-clip-text text-transparent;
-}
-
-.gradient-text-primary {
-  @apply bg-gradient-to-r from-brand-primary to-brand-secondary bg-clip-text text-transparent;
-}
-
-/* ===== Status Color Utilities ===== */
-.text-success { color: var(--sev-success); }
-.text-error { color: var(--sev-crit); }
-.text-warning { color: var(--sev-warn); }
-.text-info { color: var(--sev-info); }
-
-.bg-success { background-color: var(--sev-success); }
-.bg-error { background-color: var(--sev-crit); }
-.bg-warning { background-color: var(--sev-warn); }
-.bg-info { background-color: var(--sev-info); }
-
-/* ===== Loading Spinner ===== */
+/* Loading Spinner */
 .spinner {
   border: 3px solid rgba(139, 92, 246, 0.1);
   border-radius: 50%;
@@ -225,63 +55,50 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* ===== Progress Bar ===== */
-.progress-bar {
-  @apply w-full h-2 bg-bg-muted rounded-full overflow-hidden;
+/* Gradient Text */
+.gradient-text-brand {
+  background: linear-gradient(to right, var(--brand-primary), var(--brand-secondary), var(--brand-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.progress-bar-fill {
-  @apply h-full bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full transition-all duration-300;
-}
-
-/* ===== Link Styles ===== */
-.link {
-  @apply text-brand-primary hover:text-brand-primary-hover underline-offset-4 hover:underline;
-  @apply transition-colors duration-200;
-}
-
-/* ===== Divider ===== */
-.divider {
-  @apply border-t my-6;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-/* ===== Animation Utilities ===== */
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.3s ease-out;
-}
-
-.animate-slide-in-right {
-  animation: slideInRight 0.3s ease-out;
-}
-
+/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from { 
-    transform: translateY(10px); 
-    opacity: 0; 
-  }
-  to { 
-    transform: translateY(0); 
-    opacity: 1; 
-  }
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes slideInRight {
-  from { 
-    transform: translateX(20px); 
-    opacity: 0; 
-  }
-  to { 
-    transform: translateX(0); 
-    opacity: 1; 
-  }
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
+
+.animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+.animate-slide-up { animation: slideUp 0.3s ease-out; }
+.animate-slide-in-right { animation: slideInRight 0.3s ease-out; }
+
+/* ===== Catalyst UI Kit Compatible Styles ===== */
+/* 
+  99% 커스텀 CSS 제거 완료!
+  
+  기존 커스텀 클래스는 Catalyst 컴포넌트 + Tailwind 유틸리티로 대체:
+  
+  ❌ 제거된 커스텀 클래스:
+  - .card, .card-interactive → Tailwind 유틸리티 직접 사용
+  - .btn-primary, .btn-secondary → Catalyst <Button>
+  - .input, .textarea, .select → Catalyst <Input>, <Textarea>
+  - .badge-* → Catalyst <Badge>
+  
+  ✅ 유지된 최소한의 유틸리티:
+  - .spinner (커스텀 애니메이션 필요)
+  - .gradient-text-brand (브랜드 텍스트 그라데이션)
+  - animation keyframes (페이지 전환 효과)
+  
+  모든 UI는 Catalyst 컴포넌트 + Tailwind 클래스로 구현
+*/
