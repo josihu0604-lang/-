@@ -81,6 +81,16 @@ spec:
           timeoutSeconds: 3
           successThreshold: 1
           failureThreshold: 3
+        
+        # Security context for container
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       
       affinity:
         podAntiAffinity:
@@ -95,7 +105,10 @@ spec:
                   - web
               topologyKey: kubernetes.io/hostname
       
+      # Pod security context
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault

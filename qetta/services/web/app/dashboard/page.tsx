@@ -57,6 +57,7 @@ export default function DashboardPage() {
       }
 
       // Fetch user profile (mock for now)
+      // TODO: Replace with actual user profile API endpoint
       setProfile({
         email: 'user@example.com',
         name: '홍길동',
@@ -65,32 +66,53 @@ export default function DashboardPage() {
         createdAt: new Date().toISOString()
       });
 
-      // Fetch Premium analyses
-      const analysisRes = await fetch('/api/v1/premium/history', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Fetch Premium analyses with error handling
+      try {
+        const analysisRes = await fetch('/api/v1/premium/history', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      if (analysisRes.ok) {
-        const analysisData = await analysisRes.json();
-        setAnalyses(analysisData.analyses || []);
+        if (analysisRes.ok) {
+          const analysisData = await analysisRes.json();
+          if (analysisData.success && Array.isArray(analysisData.analyses)) {
+            setAnalyses(analysisData.analyses);
+          }
+        } else if (analysisRes.status === 401 || analysisRes.status === 403) {
+          router.push('/premium/login');
+          return;
+        }
+      } catch (analysisError) {
+        console.error('Failed to fetch analysis history:', analysisError);
+        // Continue loading other data even if this fails
       }
 
-      // Fetch PDF history
-      const pdfRes = await fetch('/api/v1/pdf/history', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Fetch PDF history with error handling
+      try {
+        const pdfRes = await fetch('/api/v1/pdf/history', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      if (pdfRes.ok) {
-        const pdfData = await pdfRes.json();
-        setPdfs(pdfData.pdfs || []);
+        if (pdfRes.ok) {
+          const pdfData = await pdfRes.json();
+          if (pdfData.success && Array.isArray(pdfData.pdfs)) {
+            setPdfs(pdfData.pdfs);
+          }
+        } else if (pdfRes.status === 401 || pdfRes.status === 403) {
+          router.push('/premium/login');
+          return;
+        }
+      } catch (pdfError) {
+        console.error('Failed to fetch PDF history:', pdfError);
+        // Continue even if PDF history fails
       }
 
     } catch (err) {
       console.error('Dashboard data fetch error:', err);
+      // Don't block the dashboard from rendering on error
     } finally {
       setLoading(false);
     }
@@ -106,7 +128,10 @@ export default function DashboardPage() {
     });
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return '₩0';
+    }
     return `₩${Math.round(amount).toLocaleString('ko-KR')}`;
   };
 

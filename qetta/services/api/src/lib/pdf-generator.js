@@ -10,13 +10,35 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Korean font paths (use system fonts or embed)
- * In production, embed Korean fonts
+ * Korean font paths with fallback mechanism
+ * Primary: System fonts (Alpine Linux)
+ * Fallback: DejaVu fonts (always available in Docker)
  */
-const FONT_PATH = {
-  regular: '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
-  bold: '/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf'
-};
+const FONT_PATHS = [
+  {
+    name: 'NanumGothic',
+    regular: '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
+    bold: '/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf'
+  },
+  {
+    name: 'DejaVu',
+    regular: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    bold: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+  }
+];
+
+/**
+ * Find available font from fallback list
+ */
+function getAvailableFont() {
+  for (const fontSet of FONT_PATHS) {
+    if (fs.existsSync(fontSet.regular)) {
+      return fontSet;
+    }
+  }
+  // If no fonts found, return null (use default PDFKit font)
+  return null;
+}
 
 /**
  * Generate PDF for 신복위 프리워크아웃 (Credit Counseling Pre-Workout)
@@ -293,10 +315,109 @@ function generateIndividualRecoveryApplication(data, outputPath) {
 }
 
 /**
+ * Create PDF document with font registration and error handling
+ */
+function createPDFDocument() {
+  const doc = new PDFDocument({
+    size: 'A4',
+    margins: { top: 50, bottom: 50, left: 50, right: 50 },
+    bufferPages: true,
+    autoFirstPage: true
+  });
+
+  // Register Korean font if available
+  const font = getAvailableFont();
+  if (font) {
+    try {
+      doc.registerFont('Regular', font.regular);
+      if (fs.existsSync(font.bold)) {
+        doc.registerFont('Bold', font.bold);
+      }
+      doc.font('Regular');
+    } catch (fontError) {
+      console.warn('Failed to register Korean font, using default:', fontError.message);
+    }
+  }
+
+  return doc;
+}
+
+/**
+ * Wrap PDF generation with timeout and error handling
+ */
+function wrapPDFGeneration(generatorFn, data, outputPath) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = createPDFDocument();
+      const stream = fs.createWriteStream(outputPath);
+      
+      doc.pipe(stream);
+
+      // Call the actual generator function
+      generatorFn(doc, data);
+
+      doc.end();
+      
+      // Set timeout for PDF generation (30 seconds)
+      const timeout = setTimeout(() => {
+        stream.destroy();
+        reject(new Error('PDF generation timeout'));
+      }, 30000);
+
+      stream.on('finish', () => {
+        clearTimeout(timeout);
+        // Verify file was created and has content
+        fs.stat(outputPath, (err, stats) => {
+          if (err || stats.size === 0) {
+            reject(new Error('PDF file was not created properly'));
+          } else {
+            resolve(outputPath);
+          }
+        });
+      });
+      
+      stream.on('error', (err) => {
+        clearTimeout(timeout);
+        // Clean up partial file on error
+        if (fs.existsSync(outputPath)) {
+          fs.unlinkSync(outputPath);
+        }
+        reject(err);
+      });
+
+      doc.on('error', (err) => {
+        clearTimeout(timeout);
+        stream.destroy();
+        if (fs.existsSync(outputPath)) {
+          fs.unlinkSync(outputPath);
+        }
+        reject(err);
+      });
+
+    } catch (error) {
+      // Clean up on synchronous errors
+      if (fs.existsSync(outputPath)) {
+        fs.unlinkSync(outputPath);
+      }
+      reject(error);
+    }
+  });
+}
+
+/**
  * Main PDF generation function
  * Routes to appropriate template based on plan type
  */
 async function generateApplicationPDF(analysisData, planType, outputPath) {
+  // Validate input data
+  if (!analysisData || !analysisData.summary) {
+    throw new Error('Invalid analysis data: missing summary');
+  }
+
+  if (!analysisData.summary.totalDebt || !analysisData.summary.monthlyIncome) {
+    throw new Error('Invalid analysis data: totalDebt and monthlyIncome are required');
+  }
+
   const data = {
     name: analysisData.userName || '',
     phone: analysisData.phone || '',
@@ -304,12 +425,15 @@ async function generateApplicationPDF(analysisData, planType, outputPath) {
     totalDebt: analysisData.summary.totalDebt,
     monthlyPayment: analysisData.summary.monthlyPayment,
     monthlyIncome: analysisData.summary.monthlyIncome,
-    dti: analysisData.summary.dti,
-    creditScore: analysisData.summary.creditScore,
+    dti: analysisData.summary.dti || 0,
+    creditScore: analysisData.summary.creditScore || 0,
     debts: analysisData.breakdown?.byCreditor || [],
     plan: analysisData.selectedPlan,
     creditorCount: analysisData.breakdown?.byCreditor?.length || 0,
-    totalAssets: analysisData.summary.totalAssets || 0
+    totalAssets: analysisData.summary.totalAssets || 0,
+    securedDebt: analysisData.summary.securedDebt || 0,
+    dependents: analysisData.summary.dependents || 0,
+    occupation: analysisData.summary.occupation || ''
   };
   
   switch (planType) {

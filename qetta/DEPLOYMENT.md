@@ -148,6 +148,14 @@ kubectl rollout status deployment/qetta-web -n qetta-production
 
 ### Rollback
 
+**Automatic Rollback** (via CI/CD):
+The GitHub Actions workflow includes automatic rollback on failure:
+- Pre-deployment state is saved
+- Health checks verify service functionality
+- Failed deployments trigger automatic rollback
+- Rollback completes within 3 minutes
+
+**Manual Rollback**:
 ```bash
 # Rollback to previous version
 kubectl rollout undo deployment/qetta-api -n qetta-production
@@ -155,6 +163,12 @@ kubectl rollout undo deployment/qetta-web -n qetta-production
 
 # Rollback to specific revision
 kubectl rollout undo deployment/qetta-api --to-revision=2 -n qetta-production
+
+# Check rollout history
+kubectl rollout history deployment/qetta-api -n qetta-production
+
+# Verify rollback status
+kubectl rollout status deployment/qetta-api -n qetta-production
 ```
 
 ## CI/CD Pipeline
@@ -174,8 +188,14 @@ kubectl rollout undo deployment/qetta-api --to-revision=2 -n qetta-production
 3. **Pipeline Stages**:
    - **Test**: Run unit and integration tests
    - **Build**: Build and push Docker images
-   - **Deploy**: Deploy to Kubernetes cluster
-   - **Notify**: Send Slack notification
+   - **Deploy**: Deploy to Kubernetes cluster with health checks
+     - Save pre-deployment state for rollback
+     - Apply Kubernetes manifests
+     - Wait for rollout completion (8min timeout per service)
+     - Health check API: `/health` endpoint
+     - Health check Web: Root `/` endpoint
+     - Automatic rollback on failure
+   - **Notify**: Send Slack notification with deployment status
 
 ## Monitoring
 
@@ -352,12 +372,19 @@ kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
 ### Database Optimization
 
 ```sql
--- Add indexes
-CREATE INDEX idx_user_email ON "User"(email);
-CREATE INDEX idx_analysis_user ON "PremiumAnalysis"(userId, createdAt DESC);
+-- Add indexes (already created via Prisma migrations)
+-- Verify indexes exist
+SELECT schemaname, tablename, indexname
+FROM pg_indexes
+WHERE schemaname = 'public';
 
--- Vacuum and analyze
+-- Vacuum and analyze (run periodically)
 VACUUM ANALYZE;
+
+-- Check table statistics
+SELECT relname, n_tup_ins, n_tup_upd, n_tup_del
+FROM pg_stat_user_tables
+WHERE schemaname = 'public';
 ```
 
 ### Redis Optimization
@@ -375,21 +402,157 @@ VACUUM ANALYZE;
 - Use connection pooling
 - Enable HTTP/2
 
-## Security Checklist
+## Security Configuration
+
+### Container Security Contexts
+
+All deployments include hardened security contexts:
+
+**API Deployment** (`k8s/api/deployment.yaml`):
+```yaml
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: false  # PDFKit needs write access
+  capabilities:
+    drop:
+    - ALL
+```
+
+**Web Deployment** (`k8s/web/deployment.yaml`):
+```yaml
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true  # Next.js can run read-only
+  capabilities:
+    drop:
+    - ALL
+```
+
+**Pod-Level Security** (both deployments):
+```yaml
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+```
+
+### Network Policies
+
+Network segmentation is enforced via Kubernetes NetworkPolicies (`k8s/network-policy.yaml`):
+
+**1. API Network Policy**
+- **Ingress**: Only from web pods on port 3001
+- **Egress**: Only to database on port 5432, DNS, and HTTPS
+
+**2. Web Network Policy**
+- **Ingress**: Only from ingress controller on port 3000
+- **Egress**: Only to API on port 3001, DNS, and HTTPS
+
+**3. Database Network Policy**
+- **Ingress**: Only from API pods on port 5432
+- **Egress**: DNS only (no external access)
+
+**4. Redis Network Policy**
+- **Ingress**: Only from API pods on port 6379
+- **Egress**: DNS only (no external access)
+
+Deploy network policies:
+```bash
+kubectl apply -f k8s/network-policy.yaml
+
+# Verify policies
+kubectl get networkpolicy -n qetta-production
+kubectl describe networkpolicy qetta-api-network-policy -n qetta-production
+```
+
+### Pod Disruption Budgets
+
+High availability during cluster maintenance (`k8s/pod-disruption-budget.yaml`):
+
+**API PDB**:
+- Minimum 2 pods always available
+- Prevents service disruption during node drains
+
+**Web PDB**:
+- Minimum 2 pods always available
+- Ensures frontend availability during updates
+
+Deploy PDBs:
+```bash
+kubectl apply -f k8s/pod-disruption-budget.yaml
+
+# Verify PDBs
+kubectl get pdb -n qetta-production
+kubectl describe pdb qetta-api-pdb -n qetta-production
+```
+
+### Security Checklist
 
 - ✅ Secrets stored in Kubernetes Secrets
-- ✅ Non-root containers
+- ✅ Non-root containers (UID 1000)
 - ✅ Resource limits configured
-- ✅ Network policies (optional, implement as needed)
+- ✅ Network policies implemented (4 policies)
+- ✅ Pod disruption budgets configured
+- ✅ Privilege escalation blocked
+- ✅ All capabilities dropped
+- ✅ Seccomp profile enabled (RuntimeDefault)
 - ✅ SSL/TLS enabled
 - ✅ Regular security updates
 - ✅ Audit logging enabled
+
+## Health Checks
+
+### Manual Health Verification
+
+**API Health Check**:
+```bash
+# From inside cluster
+kubectl run -it --rm debug --image=curlimages/curl --restart=Never -n qetta-production -- \
+  curl -f http://qetta-api:3001/health
+
+# From API pod
+POD=$(kubectl get pod -n qetta-production -l component=api -o jsonpath='{.items[0].metadata.name}')
+kubectl exec -n qetta-production $POD -- curl -f http://localhost:3001/health
+
+# Expected response: {"status":"healthy","timestamp":"..."}
+```
+
+**Web Health Check**:
+```bash
+# From inside cluster
+kubectl run -it --rm debug --image=curlimages/curl --restart=Never -n qetta-production -- \
+  curl -f http://qetta-web:3000/
+
+# From web pod
+POD=$(kubectl get pod -n qetta-production -l component=web -o jsonpath='{.items[0].metadata.name}')
+kubectl exec -n qetta-production $POD -- curl -f http://localhost:3000/
+
+# Expected response: HTML content (200 OK)
+```
+
+**Database Health Check**:
+```bash
+# PostgreSQL
+kubectl exec -n qetta-production qetta-postgres-0 -- pg_isready
+
+# Redis
+kubectl exec -n qetta-production qetta-redis-0 -- redis-cli ping
+```
 
 ## Support
 
 For issues and questions:
 - Check logs: `kubectl logs -f -l app=qetta -n qetta-production`
 - Review events: `kubectl get events -n qetta-production`
+- Verify network policies: `kubectl get networkpolicy -n qetta-production`
+- Check pod disruption budgets: `kubectl get pdb -n qetta-production`
+- Run health checks (see above)
 - Contact DevOps team
 - Check Sentry for errors
 

@@ -149,13 +149,32 @@ spec:
           mountPath: /app/pdfs
         - name: tmp
           mountPath: /tmp
+        
+        # Security context for container
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: false  # PDFKit needs write access
+          capabilities:
+            drop:
+            - ALL
       
       volumes:
       - name: pdf-storage
         persistentVolumeClaim:
           claimName: qetta-pdf-storage
       - name: tmp
-        emptyDir: {}
+        emptyDir:
+          sizeLimit: 500Mi  # Limit tmp directory size
+      
+      # Pod security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       
       affinity:
         podAntiAffinity:

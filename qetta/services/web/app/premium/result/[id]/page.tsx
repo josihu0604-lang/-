@@ -73,22 +73,48 @@ export default function PremiumResultPage() {
       }
 
       const data = await res.json();
+      
+      // Validate response data structure
+      if (!data || !data.summary || !Array.isArray(data.plans)) {
+        throw new Error('잘못된 분석 결과 형식입니다');
+      }
+
+      // Validate required summary fields
+      const requiredFields = ['totalDebt', 'monthlyPayment', 'monthlyIncome', 'dti', 'creditScore'];
+      const missingFields = requiredFields.filter(field => data.summary[field] === undefined);
+      if (missingFields.length > 0) {
+        console.error('Missing fields in summary:', missingFields);
+        throw new Error('분석 결과 데이터가 불완전합니다');
+      }
+
+      // Validate plans array
+      if (data.plans.length === 0) {
+        throw new Error('추천 가능한 플랜이 없습니다');
+      }
+
       setResult(data);
       
       // Auto-select recommended plan
       const recommended = data.plans.find((p: Plan) => p.isRecommended);
       if (recommended) {
         setSelectedPlanId(recommended.id);
+      } else {
+        // Fallback to first plan if no recommendation
+        setSelectedPlanId(data.plans[0].id);
       }
 
     } catch (err: any) {
+      console.error('Fetch result error:', err);
       setError(err.message || '결과 조회 중 오류가 발생했습니다');
     } finally {
       setLoading(false);
     }
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return '₩0';
+    }
     return `₩${Math.round(amount).toLocaleString('ko-KR')}`;
   };
 
@@ -140,14 +166,19 @@ export default function PremiumResultPage() {
         throw new Error('선택된 플랜을 찾을 수 없습니다');
       }
 
-      // Map plan IDs to plan types
-      const planTypeMap: Record<string, string> = {
-        '1': 'SHINBOK_PRE_WORKOUT',
-        '2': 'FRESH_START_FUND',
-        '3': 'INDIVIDUAL_RECOVERY'
-      };
-
-      const planType = planTypeMap[selectedPlan.id] || 'SHINBOK_PRE_WORKOUT';
+      // Determine plan type from plan name or ID
+      let planType = 'SHINBOK_PRE_WORKOUT';
+      
+      const planName = selectedPlan.planName.toLowerCase();
+      if (planName.includes('신복위') || planName.includes('프리워크아웃')) {
+        planType = 'SHINBOK_PRE_WORKOUT';
+      } else if (planName.includes('새출발기금')) {
+        planType = 'FRESH_START_FUND';
+      } else if (planName.includes('개인회생')) {
+        planType = 'INDIVIDUAL_RECOVERY';
+      } else if (planName.includes('개인파산')) {
+        planType = 'INDIVIDUAL_BANKRUPTCY';
+      }
 
       const res = await fetch('/api/v1/pdf/generate', {
         method: 'POST',
