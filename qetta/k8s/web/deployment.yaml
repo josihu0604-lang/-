@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qetta-web
+  namespace: qetta-production
+  labels:
+    app: qetta
+    component: web
+    tier: frontend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: qetta
+      component: web
+  template:
+    metadata:
+      labels:
+        app: qetta
+        component: web
+        tier: frontend
+    spec:
+      containers:
+      - name: web
+        image: ghcr.io/your-org/qetta-web:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        
+        env:
+        - name: NODE_ENV
+          value: "production"
+        
+        - name: NEXT_PUBLIC_API_URL
+          value: "https://api.qetta.co.kr"
+        
+        - name: NEXT_PUBLIC_TOSS_CLIENT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: toss-client-key
+        
+        - name: NEXT_PUBLIC_NICE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: qetta-secrets
+              key: nice-client-id
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: component
+                  operator: In
+                  values:
+                  - web
+              topologyKey: kubernetes.io/hostname
+      
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000

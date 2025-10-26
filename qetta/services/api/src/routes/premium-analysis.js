@@ -461,6 +461,60 @@ async function premiumAnalysisRoutes(fastify, options) {
       });
     }
   });
+  
+  /**
+   * GET /premium/history
+   * 
+   * Get user's Premium analysis history
+   */
+  fastify.get('/history', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      
+      const analyses = await fastify.prisma.premiumAnalysis.findMany({
+        where: {
+          userId: userId
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          results: true,
+          status: true
+        }
+      });
+      
+      const formattedAnalyses = analyses.map(analysis => ({
+        id: analysis.id,
+        createdAt: analysis.createdAt,
+        summary: {
+          totalDebt: analysis.results.summary?.totalDebt || 0,
+          dti: analysis.results.summary?.dti || 0,
+          creditScore: analysis.results.summary?.creditScore || 0,
+          riskLevel: analysis.results.summary?.riskLevel || 'MEDIUM'
+        },
+        status: analysis.status
+      }));
+      
+      return reply.status(200).send({
+        success: true,
+        analyses: formattedAnalyses,
+        total: analyses.length
+      });
+      
+    } catch (error) {
+      fastify.log.error('Analysis history error:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'HISTORY_FETCH_FAILED',
+        message: 'Failed to fetch analysis history'
+      });
+    }
+  });
 }
 
 /**

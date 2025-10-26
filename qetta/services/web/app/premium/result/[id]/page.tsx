@@ -43,6 +43,7 @@ export default function PremiumResultPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   useEffect(() => {
     fetchResult();
@@ -117,6 +118,75 @@ export default function PremiumResultPage() {
     if (probability >= 40) return 'text-yellow-400';
     return 'text-orange-400';
   };
+
+  async function handleGeneratePDF() {
+    if (!selectedPlanId) {
+      alert('플랜을 먼저 선택해주세요');
+      return;
+    }
+
+    setGeneratingPDF(true);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      
+      if (!token) {
+        router.push('/premium/login');
+        return;
+      }
+
+      const selectedPlan = result?.plans.find(p => p.id === selectedPlanId);
+      if (!selectedPlan) {
+        throw new Error('선택된 플랜을 찾을 수 없습니다');
+      }
+
+      // Map plan IDs to plan types
+      const planTypeMap: Record<string, string> = {
+        '1': 'SHINBOK_PRE_WORKOUT',
+        '2': 'FRESH_START_FUND',
+        '3': 'INDIVIDUAL_RECOVERY'
+      };
+
+      const planType = planTypeMap[selectedPlan.id] || 'SHINBOK_PRE_WORKOUT';
+
+      const res = await fetch('/api/v1/pdf/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          analysisId: analysisId,
+          planType: planType
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'PDF 생성에 실패했습니다');
+      }
+
+      const data = await res.json();
+      
+      // Download PDF
+      const downloadUrl = data.pdfUrl;
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = data.filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      alert('✅ PDF가 성공적으로 생성되었습니다!');
+
+    } catch (err: any) {
+      console.error('PDF generation error:', err);
+      alert(err.message || 'PDF 생성 중 오류가 발생했습니다');
+    } finally {
+      setGeneratingPDF(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -421,10 +491,15 @@ export default function PremiumResultPage() {
                 <h3 className="text-lg font-bold text-white mb-4">다음 단계</h3>
                 <div className="space-y-3">
                   <button
-                    onClick={() => alert('PDF 생성 기능 구현 예정')}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all transform hover:scale-105"
+                    onClick={handleGeneratePDF}
+                    disabled={generatingPDF || !selectedPlanId}
+                    className={`w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all ${
+                      generatingPDF || !selectedPlanId
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'transform hover:scale-105'
+                    }`}
                   >
-                    📄 신청서 PDF 생성
+                    {generatingPDF ? '📄 생성 중...' : '📄 신청서 PDF 생성'}
                   </button>
                   <button
                     onClick={() => router.push('/dashboard')}

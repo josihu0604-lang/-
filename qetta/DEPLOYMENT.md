@@ -1,416 +1,401 @@
-# Qetta Deployment Guide
+# qetta Production Deployment Guide
 
-## Quick Start (Development)
+This document provides comprehensive instructions for deploying qetta to production using Kubernetes.
 
-### 1. Prerequisites
-- Docker and Docker Compose installed
-- Node.js 18+ (for local development)
-- PostgreSQL 14+ (if not using Docker)
-- Redis 6+ (if not using Docker)
+## Table of Contents
 
-### 2. Environment Setup
+- [Prerequisites](#prerequisites)
+- [Initial Setup](#initial-setup)
+- [Deployment Process](#deployment-process)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Monitoring](#monitoring)
+- [Backup & Recovery](#backup--recovery)
+- [Troubleshooting](#troubleshooting)
 
-```bash
-# Clone/extract the project
-cd qetta
+## Prerequisites
 
-# Copy environment configuration
-cp .env.example .env
+### Required Tools
 
-# Edit .env with your actual credentials (optional for testing)
-nano .env
-```
+- `kubectl` v1.28+
+- `docker` v24+
+- `helm` v3.12+ (optional, for package management)
+- Access to Kubernetes cluster
+- GitHub account with repository access
 
-### 3. Start with Docker Compose
+### Cloud Resources
 
-```bash
-# Start all services (API, Web, PostgreSQL, Redis)
-docker-compose -f infra/docker-compose.full.yml up -d
+- Kubernetes cluster (GKE, EKS, AKS, or self-hosted)
+- Container registry (GHCR, GCR, ECR, or DockerHub)
+- Cloud storage for backups (GCS, S3, or Azure Blob)
+- SSL certificates (Let's Encrypt recommended)
 
-# Check logs
-docker-compose -f infra/docker-compose.full.yml logs -f
+### External Services
 
-# Access services:
-# - API: http://localhost:8080
-# - Web: http://localhost:3000
-# - PostgreSQL: localhost:5432
-# - Redis: localhost:6379
-```
+- Toss Payments account (production credentials)
+- NICE API account (production credentials)
+- Sentry account (optional, for error tracking)
+- DataDog account (optional, for monitoring)
 
-### 4. Run Database Migrations
+## Initial Setup
 
-```bash
-# If using Docker
-docker-compose -f infra/docker-compose.full.yml exec api npm run migrate:deploy
-
-# If running locally
-cd services/api
-npm install
-npm run migrate:deploy
-npm run seed  # Optional: seed test data
-```
-
-### 5. Verify Installation
+### 1. Create Kubernetes Namespace
 
 ```bash
-# Health check
-curl http://localhost:8080/health
-
-# Expected response:
-# {"status":"ok","ts":"2025-10-26T..."}
+kubectl apply -f k8s/namespace.yaml
 ```
 
-## OAuth Integration Setup
+### 2. Configure Secrets
 
-### Toss Certification
-
-1. **Test Mode** (default):
-   - Uses provided test credentials
-   - No additional setup needed
-
-2. **Production Mode**:
-   ```bash
-   # Get production credentials from Toss
-   # Update in .env:
-   TOSS_CLIENT_ID=your_production_client_id
-   TOSS_CLIENT_SECRET=your_production_client_secret
-   ```
-
-3. **Test Connection**:
-   ```bash
-   # Register/login first
-   curl -X POST http://localhost:8080/api/v1/auth/register \
-     -H "Content-Type: application/json" \
-     -d '{"email":"test@example.com","password":"password123"}'
-
-   # Get JWT token from response, then test Toss
-   curl -X POST http://localhost:8080/api/v1/oauth/toss/test \
-     -H "Authorization: Bearer YOUR_JWT_TOKEN"
-   ```
-
-### KFTC OpenBanking
-
-1. **Register Callback URL**:
-   - Visit https://testapi.openbanking.or.kr
-   - Login with credentials from `토스페이먼츠.txt`
-   - Go to MY PAGE → API Key 관리
-   - Add Callback URL: `http://localhost:3000/oauth/kftc/callback`
-   - Or for production: `https://yourdomain.com/oauth/kftc/callback`
-
-2. **Update Environment**:
-   ```bash
-   # In .env
-   KFTC_REDIRECT_URI=http://localhost:3000/oauth/kftc/callback
-   # Or for production:
-   KFTC_REDIRECT_URI=https://yourdomain.com/oauth/kftc/callback
-   ```
-
-3. **Test Connection**:
-   - Visit http://localhost:3000/oauth
-   - Click "🔗 OpenBanking 연결"
-   - Complete authorization in popup
-   - Verify connection status
-
-## Production Deployment
-
-### Option 1: Docker Compose (Recommended)
+Create production secrets (DO NOT commit these):
 
 ```bash
-# Update .env for production
-NODE_ENV=production
-DATABASE_URL=postgresql://user:pass@db-host:5432/qetta
-REDIS_URL=redis://redis-host:6379/0
+# Database credentials
+kubectl create secret generic postgres-credentials \
+  --from-literal=username=qetta \
+  --from-literal=password=YOUR_SECURE_PASSWORD \
+  -n qetta-production
 
-# Production URLs
-API_URL=https://api.yourdomain.com
-WEB_URL=https://yourdomain.com
+# Redis credentials
+kubectl create secret generic redis-credentials \
+  --from-literal=password=YOUR_REDIS_PASSWORD \
+  -n qetta-production
 
-# OAuth callbacks
-KFTC_REDIRECT_URI=https://yourdomain.com/oauth/kftc/callback
-
-# Start services
-docker-compose -f infra/docker-compose.full.yml up -d
-
-# Check status
-docker-compose -f infra/docker-compose.full.yml ps
+# Application secrets
+kubectl create secret generic qetta-secrets \
+  --from-literal=database-url="postgresql://qetta:PASSWORD@qetta-postgres:5432/qetta?schema=public" \
+  --from-literal=redis-url="redis://:PASSWORD@qetta-redis:6379" \
+  --from-literal=jwt-secret="YOUR_JWT_SECRET_MINIMUM_32_CHARS" \
+  --from-literal=encryption-key="YOUR_ENCRYPTION_KEY_32_CHARS" \
+  --from-literal=toss-client-key="YOUR_TOSS_CLIENT_KEY" \
+  --from-literal=toss-secret-key="YOUR_TOSS_SECRET_KEY" \
+  --from-literal=nice-client-id="YOUR_NICE_CLIENT_ID" \
+  --from-literal=nice-secret-key="YOUR_NICE_SECRET_KEY" \
+  --from-literal=sentry-dsn="YOUR_SENTRY_DSN" \
+  --from-literal=datadog-api-key="YOUR_DATADOG_API_KEY" \
+  -n qetta-production
 ```
 
-### Option 2: Kubernetes
+### 3. Configure Ingress
 
-```yaml
-# Example k8s deployment
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: qetta-api
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: qetta-api
-  template:
-    metadata:
-      labels:
-        app: qetta-api
-    spec:
-      containers:
-      - name: api
-        image: qetta-api:latest
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: qetta-secrets
-              key: database-url
-        - name: REDIS_URL
-          valueFrom:
-            secretKeyRef:
-              name: qetta-secrets
-              key: redis-url
-        ports:
-        - containerPort: 8080
-```
+Update `k8s/ingress.yaml` with your domain:
 
-### Option 3: Cloud Platforms
+- Replace `qetta.co.kr` with your actual domain
+- Configure SSL certificates (cert-manager recommended)
+- Adjust rate limiting and CORS settings
 
-#### Vercel (Web Service)
+### 4. Deploy Database
+
 ```bash
-cd services/web
-vercel deploy --prod
+# Deploy PostgreSQL
+kubectl apply -f k8s/database/postgres-statefulset.yaml
+
+# Wait for PostgreSQL to be ready
+kubectl wait --for=condition=ready pod -l component=database -n qetta-production --timeout=5m
+
+# Deploy Redis
+kubectl apply -f k8s/database/redis-statefulset.yaml
+
+# Wait for Redis to be ready
+kubectl wait --for=condition=ready pod -l component=cache -n qetta-production --timeout=5m
 ```
 
-#### Heroku (API Service)
+### 5. Run Database Migrations
+
 ```bash
-cd services/api
-heroku create qetta-api
-heroku addons:create heroku-postgresql:standard-0
-heroku addons:create heroku-redis:premium-0
-git push heroku main
+# Get API pod name
+POD_NAME=$(kubectl get pod -n qetta-production -l component=api -o jsonpath='{.items[0].metadata.name}')
+
+# Run migrations
+kubectl exec -n qetta-production $POD_NAME -- npm run migrate:deploy
 ```
 
-#### AWS (Complete Stack)
-- **API**: ECS Fargate or Lambda
-- **Web**: CloudFront + S3 (static) or ECS
-- **Database**: RDS PostgreSQL
-- **Cache**: ElastiCache Redis
+## Deployment Process
 
-## Firewall Configuration
+### Manual Deployment
 
-### Outbound Rules
-
-Allow HTTPS (443) to:
-
-**Toss Certification:**
-```
-117.52.3.222
-117.52.3.235
-211.115.96.222
-211.115.96.235
-```
-
-**KFTC OpenBanking:**
-```
-testapi.openbanking.or.kr (testing)
-openapi.openbanking.or.kr (production)
-```
-
-### Inbound Rules
-
-```
-Port 8080 (API)
-Port 3000 (Web - dev)
-Port 80/443 (Web - production)
-```
-
-## Environment Variables Reference
-
-### Core Configuration
 ```bash
-NODE_ENV=production
-PORT=8080
-JWT_SECRET=<generate-secure-random-string>
-CORS_ORIGINS=https://yourdomain.com
-API_URL=https://api.yourdomain.com
-WEB_URL=https://yourdomain.com
+# Apply all manifests
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/database/
+kubectl apply -f k8s/pvc.yaml
+kubectl apply -f k8s/api/
+kubectl apply -f k8s/web/
+kubectl apply -f k8s/ingress.yaml
+
+# Verify deployment
+kubectl get pods -n qetta-production
+kubectl get services -n qetta-production
+kubectl get ingress -n qetta-production
 ```
 
-### Database & Cache
+### Rolling Update
+
 ```bash
-DATABASE_URL=postgresql://user:pass@host:5432/dbname?schema=public
-REDIS_URL=redis://host:6379/0
+# Update API image
+kubectl set image deployment/qetta-api \
+  api=ghcr.io/your-org/qetta-api:NEW_TAG \
+  -n qetta-production
+
+# Update Web image
+kubectl set image deployment/qetta-web \
+  web=ghcr.io/your-org/qetta-web:NEW_TAG \
+  -n qetta-production
+
+# Monitor rollout
+kubectl rollout status deployment/qetta-api -n qetta-production
+kubectl rollout status deployment/qetta-web -n qetta-production
 ```
 
-### Stripe (Optional)
+### Rollback
+
 ```bash
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_STARTER=price_...
-STRIPE_PRICE_PRO=price_...
-STRIPE_PRICE_ENTERPRISE=price_...
+# Rollback to previous version
+kubectl rollout undo deployment/qetta-api -n qetta-production
+kubectl rollout undo deployment/qetta-web -n qetta-production
+
+# Rollback to specific revision
+kubectl rollout undo deployment/qetta-api --to-revision=2 -n qetta-production
 ```
 
-### Toss Certification
+## CI/CD Pipeline
+
+### GitHub Actions Setup
+
+1. **Add Repository Secrets**:
+   - Go to Settings > Secrets and variables > Actions
+   - Add the following secrets:
+     - `KUBE_CONFIG`: Base64-encoded kubeconfig file
+     - `SLACK_WEBHOOK_URL`: Slack webhook for notifications
+
+2. **Trigger Deployment**:
+   - Push to `main` branch triggers automatic deployment
+   - Manual trigger: Go to Actions > Deploy to Production > Run workflow
+
+3. **Pipeline Stages**:
+   - **Test**: Run unit and integration tests
+   - **Build**: Build and push Docker images
+   - **Deploy**: Deploy to Kubernetes cluster
+   - **Notify**: Send Slack notification
+
+## Monitoring
+
+### Sentry (Error Tracking)
+
+1. Create Sentry project at https://sentry.io
+2. Copy DSN and add to secrets
+3. Errors are automatically reported
+
+### DataDog (APM & Metrics)
+
+1. Create DataDog account at https://datadoghq.com
+2. Install DataDog agent in cluster:
+
 ```bash
-TOSS_OAUTH_BASE=https://oauth2.cert.toss.im
-TOSS_API_BASE=https://cert.toss.im
-TOSS_CLIENT_ID=<your_client_id>
-TOSS_CLIENT_SECRET=<your_client_secret>
-TOSS_SCOPE=ca
+helm repo add datadog https://helm.datadoghq.com
+helm repo update
+
+helm install datadog datadog/datadog \
+  --set datadog.apiKey=YOUR_API_KEY \
+  --set datadog.site=datadoghq.com \
+  --namespace qetta-production
 ```
 
-### KFTC OpenBanking
+### Kubernetes Dashboard
+
 ```bash
-KFTC_API_BASE=https://openapi.openbanking.or.kr
-KFTC_CLIENT_ID=<your_client_id>
-KFTC_CLIENT_SECRET=<your_client_secret>
-KFTC_REDIRECT_URI=https://yourdomain.com/oauth/kftc/callback
-KFTC_SCOPE=login inquiry
+# Install metrics-server
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+# View resource usage
+kubectl top pods -n qetta-production
+kubectl top nodes
 ```
 
-### Frontend (Next.js)
+### Logs
+
 ```bash
-NEXT_PUBLIC_API_URL=https://api.yourdomain.com/api/v1
-```
+# View API logs
+kubectl logs -f deployment/qetta-api -n qetta-production
 
-## Monitoring & Logs
+# View Web logs
+kubectl logs -f deployment/qetta-web -n qetta-production
 
-### Docker Logs
-```bash
-# View all logs
-docker-compose logs -f
+# View logs with label selector
+kubectl logs -l app=qetta -n qetta-production --tail=100
 
-# View specific service
-docker-compose logs -f api
-docker-compose logs -f web
-```
-
-### Application Logs
-- API logs use Pino logger (JSON format)
-- Logs go to stdout (captured by Docker/k8s)
-
-### Health Checks
-```bash
-# API health
-curl https://api.yourdomain.com/health
-
-# Check OAuth status
-curl https://api.yourdomain.com/api/v1/oauth/status \
-  -H "Authorization: Bearer YOUR_TOKEN"
+# Stream logs from all containers
+kubectl logs -f -l app=qetta -n qetta-production --all-containers=true
 ```
 
 ## Backup & Recovery
 
-### Database Backup
-```bash
-# Manual backup
-docker-compose exec db pg_dump -U qetta qetta > backup.sql
+### Automated Daily Backups
 
-# Restore
-docker-compose exec -T db psql -U qetta qetta < backup.sql
+Deploy the backup CronJob:
+
+```bash
+kubectl apply -f k8s/cronjob-backup.yaml
 ```
 
-### Redis Backup
+This runs daily at 2 AM KST and:
+- Creates PostgreSQL dump
+- Uploads to cloud storage
+- Retains last 30 days of backups
+
+### Manual Backup
+
 ```bash
-# Manual backup (RDB snapshot)
-docker-compose exec redis redis-cli BGSAVE
+./scripts/backup-database.sh
 ```
+
+### Restore from Backup
+
+```bash
+# Download backup from cloud storage
+gsutil cp gs://qetta-backups/database/qetta_backup_20250126_120000.sql.gz /tmp/
+
+# Restore database
+./scripts/restore-database.sh /tmp/qetta_backup_20250126_120000.sql.gz
+```
+
+### Disaster Recovery
+
+1. **Total Cluster Failure**:
+   ```bash
+   # Create new cluster
+   # Deploy from scratch
+   kubectl apply -f k8s/
+   
+   # Restore latest backup
+   ./scripts/restore-database.sh LATEST_BACKUP
+   ```
+
+2. **Data Corruption**:
+   ```bash
+   # Scale down API
+   kubectl scale deployment qetta-api -n qetta-production --replicas=0
+   
+   # Restore from backup
+   ./scripts/restore-database.sh GOOD_BACKUP
+   
+   # Verify data
+   # Scale up API
+   kubectl scale deployment qetta-api -n qetta-production --replicas=3
+   ```
 
 ## Troubleshooting
 
-### API won't start
+### Pod Not Starting
+
 ```bash
-# Check database connection
-docker-compose exec api npm run migrate:deploy
+# Check pod status
+kubectl describe pod POD_NAME -n qetta-production
 
 # Check logs
-docker-compose logs api
+kubectl logs POD_NAME -n qetta-production
 
-# Verify environment
-docker-compose exec api env | grep DATABASE_URL
+# Check events
+kubectl get events -n qetta-production --sort-by='.lastTimestamp'
 ```
 
-### OAuth callback fails
-```bash
-# Verify callback URL is registered
-# Check Redis is running
-docker-compose ps redis
+### Database Connection Issues
 
-# Test Redis connection
-docker-compose exec redis redis-cli ping
+```bash
+# Test connection from API pod
+kubectl exec -it POD_NAME -n qetta-production -- \
+  psql $DATABASE_URL -c "SELECT 1"
+
+# Check database pod
+kubectl logs -l component=database -n qetta-production
 ```
 
-### Database migration issues
+### High Memory/CPU Usage
+
 ```bash
-# Reset database (CAUTION: destroys data)
-docker-compose down -v
-docker-compose up -d db
-docker-compose exec api npm run migrate:deploy
+# Check resource usage
+kubectl top pods -n qetta-production
+
+# Scale horizontally
+kubectl scale deployment/qetta-api --replicas=5 -n qetta-production
+
+# Adjust resource limits in deployment.yaml
+```
+
+### SSL Certificate Issues
+
+```bash
+# Check cert-manager
+kubectl get certificates -n qetta-production
+kubectl describe certificate qetta-tls-cert -n qetta-production
+
+# Renew certificate
+kubectl delete certificate qetta-tls-cert -n qetta-production
+kubectl apply -f k8s/ingress.yaml
+```
+
+### Ingress Not Working
+
+```bash
+# Check ingress
+kubectl describe ingress qetta-ingress -n qetta-production
+
+# Check nginx ingress controller
+kubectl logs -n ingress-nginx -l app.kubernetes.io/component=controller
+
+# Test from inside cluster
+kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
+  curl http://qetta-api.qetta-production.svc.cluster.local:3001/health
 ```
 
 ## Performance Tuning
 
-### PostgreSQL
-```bash
-# Increase connections
-DATABASE_URL=postgresql://user:pass@host:5432/db?max_connections=20
+### Database Optimization
+
+```sql
+-- Add indexes
+CREATE INDEX idx_user_email ON "User"(email);
+CREATE INDEX idx_analysis_user ON "PremiumAnalysis"(userId, createdAt DESC);
+
+-- Vacuum and analyze
+VACUUM ANALYZE;
 ```
 
-### Redis
+### Redis Optimization
+
 ```bash
-# Use connection pooling
-REDIS_URL=redis://host:6379/0?maxRetriesPerRequest=3
+# Adjust maxmemory policy in redis-statefulset.yaml
+# allkeys-lru: Evict least recently used keys
+# allkeys-lfu: Evict least frequently used keys
 ```
 
-### Node.js
-```bash
-# Increase memory limit
-NODE_OPTIONS=--max-old-space-size=4096
-```
+### API Performance
+
+- Enable response compression
+- Implement caching headers
+- Use connection pooling
+- Enable HTTP/2
 
 ## Security Checklist
 
-- [ ] Change JWT_SECRET to strong random value
-- [ ] Use HTTPS in production (TLS certificate)
-- [ ] Set strong database passwords
-- [ ] Configure CORS_ORIGINS to specific domains
-- [ ] Enable rate limiting (already configured)
-- [ ] Use production OAuth credentials (not test)
-- [ ] Set up firewall rules
-- [ ] Enable database backups
-- [ ] Monitor for unusual activity
-- [ ] Keep dependencies updated
-- [ ] Use secrets management (not .env in production)
-
-## Scaling
-
-### Horizontal Scaling
-```bash
-# Scale API instances
-docker-compose up -d --scale api=3
-
-# Or in k8s
-kubectl scale deployment qetta-api --replicas=5
-```
-
-### Database Scaling
-- Use read replicas for read-heavy workloads
-- Consider connection pooling (PgBouncer)
-- Enable query caching in Redis
-
-### CDN
-- Serve static assets via CDN
-- Cache API responses where appropriate
-- Use CloudFront, Cloudflare, or similar
+- ✅ Secrets stored in Kubernetes Secrets
+- ✅ Non-root containers
+- ✅ Resource limits configured
+- ✅ Network policies (optional, implement as needed)
+- ✅ SSL/TLS enabled
+- ✅ Regular security updates
+- ✅ Audit logging enabled
 
 ## Support
 
-For issues or questions:
-- Check OAUTH_INTEGRATION.md for OAuth-specific help
-- Review logs: `docker-compose logs -f`
-- Open an issue in the repository
-- Contact: qetta-support@example.com
+For issues and questions:
+- Check logs: `kubectl logs -f -l app=qetta -n qetta-production`
+- Review events: `kubectl get events -n qetta-production`
+- Contact DevOps team
+- Check Sentry for errors
 
----
+## References
 
-**Last Updated**: 2025-10-26  
-**Version**: 1.0.0
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [Next.js Deployment](https://nextjs.org/docs/deployment)
+- [Fastify Deployment](https://fastify.dev/docs/latest/Guides/Deployment/)
+- [Prisma Production Best Practices](https://www.prisma.io/docs/guides/performance-and-optimization/connection-management)
