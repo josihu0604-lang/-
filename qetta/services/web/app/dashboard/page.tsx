@@ -137,11 +137,11 @@ export default function DashboardPage() {
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'LOW': return 'text-green-400 bg-green-500/20';
-      case 'MEDIUM': return 'text-yellow-400 bg-yellow-500/20';
-      case 'HIGH': return 'text-orange-400 bg-orange-500/20';
-      case 'CRITICAL': return 'text-red-400 bg-red-500/20';
-      default: return 'text-gray-400 bg-gray-500/20';
+      case 'LOW': return 'text-success bg-sev-success/20';
+      case 'MEDIUM': return 'text-warning bg-sev-warn/20';
+      case 'HIGH': return 'text-warning bg-sev-warn/20';
+      case 'CRITICAL': return 'text-error bg-sev-crit/20';
+      default: return 'text-fg-muted bg-bg-muted/20';
     }
   };
 
@@ -167,38 +167,38 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0B0F14] via-[#111827] to-[#0B0F14] flex items-center justify-center">
+      <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-white text-xl font-semibold">대시보드 로딩 중...</p>
+          <div className="spinner w-16 h-16 mb-4"></div>
+          <p className="text-fg text-xl font-semibold">대시보드 로딩 중...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0B0F14] via-[#111827] to-[#0B0F14]">
+    <div className="min-h-screen bg-bg">
       {/* Header */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
+      <div className="bg-bg-elev/50 backdrop-blur-sm border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 className="text-3xl font-bold text-fg mb-2">
                 대시보드
               </h1>
-              <p className="text-gray-400">
+              <p className="text-fg-muted">
                 {profile?.name || profile?.email}님, 환영합니다
               </p>
             </div>
             <div className="flex items-center gap-4">
               {profile?.tier === 'PREMIUM' && (
-                <div className="px-4 py-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-lg">
-                  <span className="text-yellow-400 font-bold">⭐ PREMIUM</span>
+                <div className="badge badge-accent">
+                  <span className="font-bold">⭐ PREMIUM</span>
                 </div>
               )}
               <Link
                 href="/"
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all"
+                className="btn btn-secondary btn-sm"
               >
                 홈으로
               </Link>
@@ -208,15 +208,15 @@ export default function DashboardPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10">
+      <div className="bg-bg-elev/50 backdrop-blur-sm border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex gap-8">
             <button
               onClick={() => setActiveTab('overview')}
               className={`py-4 px-2 border-b-2 font-semibold transition-all ${
                 activeTab === 'overview'
-                  ? 'border-cyan-500 text-cyan-400'
-                  : 'border-transparent text-gray-400 hover:text-white'
+                  ? 'border-brand-primary text-brand-primary'
+                  : 'border-transparent text-fg-muted hover:text-fg'
               }`}
             >
               📊 개요
@@ -225,8 +225,8 @@ export default function DashboardPage() {
               onClick={() => setActiveTab('analyses')}
               className={`py-4 px-2 border-b-2 font-semibold transition-all ${
                 activeTab === 'analyses'
-                  ? 'border-cyan-500 text-cyan-400'
-                  : 'border-transparent text-gray-400 hover:text-white'
+                  ? 'border-brand-primary text-brand-primary'
+                  : 'border-transparent text-fg-muted hover:text-fg'
               }`}
             >
               📈 분석 내역
@@ -235,8 +235,8 @@ export default function DashboardPage() {
               onClick={() => setActiveTab('pdfs')}
               className={`py-4 px-2 border-b-2 font-semibold transition-all ${
                 activeTab === 'pdfs'
-                  ? 'border-cyan-500 text-cyan-400'
-                  : 'border-transparent text-gray-400 hover:text-white'
+                  ? 'border-brand-primary text-brand-primary'
+                  : 'border-transparent text-fg-muted hover:text-fg'
               }`}
             >
               📄 PDF 내역
@@ -245,8 +245,8 @@ export default function DashboardPage() {
               onClick={() => setActiveTab('settings')}
               className={`py-4 px-2 border-b-2 font-semibold transition-all ${
                 activeTab === 'settings'
-                  ? 'border-cyan-500 text-cyan-400'
-                  : 'border-transparent text-gray-400 hover:text-white'
+                  ? 'border-brand-primary text-brand-primary'
+                  : 'border-transparent text-fg-muted hover:text-fg'
               }`}
             >
               ⚙️ 설정
@@ -263,28 +263,28 @@ export default function DashboardPage() {
           <div className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+              <div className="card p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-gray-400 text-sm">총 분석 횟수</h3>
+                  <h3 className="text-fg-muted text-sm">총 분석 횟수</h3>
                   <span className="text-2xl">📊</span>
                 </div>
-                <p className="text-3xl font-bold text-white">{analyses.length}</p>
+                <p className="text-3xl font-bold text-fg">{analyses.length}</p>
               </div>
               
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+              <div className="card p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-gray-400 text-sm">생성된 PDF</h3>
+                  <h3 className="text-fg-muted text-sm">생성된 PDF</h3>
                   <span className="text-2xl">📄</span>
                 </div>
-                <p className="text-3xl font-bold text-white">{pdfs.length}</p>
+                <p className="text-3xl font-bold text-fg">{pdfs.length}</p>
               </div>
               
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+              <div className="card p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-gray-400 text-sm">회원 등급</h3>
+                  <h3 className="text-fg-muted text-sm">회원 등급</h3>
                   <span className="text-2xl">{profile?.tier === 'PREMIUM' ? '⭐' : '🆓'}</span>
                 </div>
-                <p className="text-3xl font-bold text-white">
+                <p className="text-3xl font-bold text-fg">
                   {profile?.tier === 'PREMIUM' ? 'PREMIUM' : 'FREE'}
                 </p>
               </div>
@@ -292,14 +292,14 @@ export default function DashboardPage() {
 
             {/* Recent Analyses */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4">최근 분석</h2>
+              <h2 className="text-xl font-bold text-fg mb-4">최근 분석</h2>
               {analyses.length > 0 ? (
                 <div className="space-y-3">
                   {analyses.slice(0, 3).map((analysis) => (
                     <Link
                       key={analysis.id}
                       href={`/premium/result/${analysis.id}`}
-                      className="block p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+                      className="card-interactive block p-4"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -318,17 +318,17 @@ export default function DashboardPage() {
                             {formatDate(analysis.createdAt)}
                           </p>
                         </div>
-                        <div className="text-cyan-400 text-xl">→</div>
+                        <div className="text-brand-primary text-xl">→</div>
                       </div>
                     </Link>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-fg-muted">
                   <p className="mb-4">아직 분석 내역이 없습니다</p>
                   <Link
                     href="/premium/analyze"
-                    className="inline-block px-6 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl transition-all"
+                    className="btn btn-primary"
                   >
                     첫 분석 시작하기
                   </Link>
@@ -338,13 +338,13 @@ export default function DashboardPage() {
 
             {/* Recent PDFs */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4">최근 생성된 PDF</h2>
+              <h2 className="text-xl font-bold text-fg mb-4">최근 생성된 PDF</h2>
               {pdfs.length > 0 ? (
                 <div className="space-y-3">
                   {pdfs.slice(0, 3).map((pdf) => (
                     <div
                       key={pdf.id}
-                      className="p-4 bg-white/5 border border-white/10 rounded-lg"
+                      className="card p-4"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -359,7 +359,7 @@ export default function DashboardPage() {
                           href={pdf.downloadUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-all"
+                          className="btn btn-primary btn-sm"
                         >
                           다운로드
                         </a>
@@ -368,7 +368,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-fg-muted">
                   <p>아직 생성된 PDF가 없습니다</p>
                 </div>
               )}
@@ -462,7 +462,7 @@ export default function DashboardPage() {
                           href={pdf.downloadUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-all"
+                          className="btn btn-primary btn-sm"
                         >
                           다운로드
                         </a>
@@ -486,7 +486,7 @@ export default function DashboardPage() {
           <div className="space-y-6">
             {/* Profile Settings */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4">프로필 설정</h2>
+              <h2 className="text-xl font-bold text-fg mb-4">프로필 설정</h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-gray-400 text-sm mb-2">이메일</label>
@@ -526,7 +526,7 @@ export default function DashboardPage() {
 
             {/* Subscription Info */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4">구독 정보</h2>
+              <h2 className="text-xl font-bold text-fg mb-4">구독 정보</h2>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-lg">
                   <div>
@@ -551,7 +551,7 @@ export default function DashboardPage() {
 
             {/* Security */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4">보안</h2>
+              <h2 className="text-xl font-bold text-fg mb-4">보안</h2>
               <div className="space-y-3">
                 <button
                   onClick={() => alert('비밀번호 변경 기능 구현 예정')}

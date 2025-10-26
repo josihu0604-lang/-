@@ -1,34 +1,263 @@
+/* Pretendard 한글 웹폰트 - 가독성 최적화된 모던 한글 폰트 */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard-dynamic-subset.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root{
-  --bg: #0B0F14;
-  --bg-elev: #111827;
-  --bg-muted: #0F172A;
-  --fg: #E5E7EB;
-  --fg-muted: #94A3B8;
-  --fg-inverted: #0B0F14;
-  --brand-primary: #22D3EE;
-  --brand-accent: #F97316;
-  --sev-crit: #EF4444;
-  --sev-warn: #F59E0B;
-  --sev-info: #22C55E;
-
+:root {
+  /* ===== 브랜드 컬러 - qetta 아이덴티티 ===== */
+  --brand-primary: #8b5cf6;           /* Purple - 주요 브랜드 컬러 */
+  --brand-primary-hover: #7c3aed;      /* Purple hover state */
+  --brand-secondary: #6366f1;          /* Indigo - 보조 브랜드 컬러 */
+  --brand-accent: #ec4899;             /* Pink - 강조 컬러 */
+  
+  /* ===== 배경 컬러 시스템 ===== */
+  --bg: #0f172a;                       /* Base background - slate-900 */
+  --bg-elev: #1e293b;                  /* Elevated surface - slate-800 */
+  --bg-muted: #334155;                 /* Muted background - slate-700 */
+  
+  /* ===== 전경/텍스트 컬러 ===== */
+  --fg: #f1f5f9;                       /* Primary text - slate-100 */
+  --fg-muted: #94a3b8;                 /* Muted text - slate-400 */
+  --fg-inverted: #0f172a;              /* Inverted text for light backgrounds */
+  
+  /* ===== 상태/심각도 컬러 ===== */
+  --sev-crit: #ef4444;                 /* Critical/Error - red-500 */
+  --sev-warn: #f59e0b;                 /* Warning - amber-500 */
+  --sev-info: #10b981;                 /* Info - emerald-500 */
+  --sev-success: #22c55e;              /* Success - green-500 */
+  
+  /* ===== Border Radius ===== */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
-
-  --shadow-sm: 0 1px 2px rgba(0,0,0,.08);
-  --shadow-md: 0 3px 12px rgba(0,0,0,.15);
-  --shadow-lg: 0 10px 30px rgba(0,0,0,.25);
+  
+  /* ===== Shadows ===== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 3px 12px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
-html { color-scheme: dark; }
-body { @apply bg-bg text-fg antialiased; font-feature-settings:"tnum" 1, "cv10" 1; }
-.container { @apply max-w-6xl mx-auto px-4; }
-.card { @apply bg-bg-elev rounded-md shadow-md border border-white/5; }
-.badge { @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium; }
-.badge-crit { @apply badge bg-red-500/10 text-red-300; }
-.badge-warn { @apply badge bg-amber-500/10 text-amber-300; }
-.badge-info { @apply badge bg-emerald-500/10 text-emerald-300; }
+/* ===== Base Styles ===== */
+html { 
+  color-scheme: dark; 
+}
+
+body { 
+  @apply bg-bg text-fg antialiased;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+  font-feature-settings: "tnum" 1, "cv10" 1;
+  letter-spacing: -0.01em;
+}
+
+.container { 
+  @apply max-w-6xl mx-auto px-4; 
+}
+
+/* ===== Card Component System ===== */
+.card { 
+  @apply bg-bg-elev rounded-lg shadow-md border border-white/10 backdrop-blur-sm;
+  transition: all 0.2s ease-in-out;
+}
+
+.card:hover {
+  @apply border-white/20 shadow-lg;
+  transform: translateY(-1px);
+}
+
+.card-interactive {
+  @apply card cursor-pointer;
+}
+
+.card-interactive:hover {
+  @apply border-brand-primary/50 shadow-xl;
+  transform: translateY(-2px);
+}
+
+/* ===== Button System ===== */
+.btn {
+  @apply inline-flex items-center justify-center px-6 py-3 rounded-lg font-medium transition-all duration-200;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply btn bg-brand-primary text-white hover:bg-brand-primary-hover;
+  @apply focus:ring-brand-primary shadow-md hover:shadow-lg;
+}
+
+.btn-secondary {
+  @apply btn bg-bg-elev text-fg border border-white/10 hover:border-white/20;
+  @apply focus:ring-brand-secondary hover:bg-bg-muted;
+}
+
+.btn-accent {
+  @apply btn bg-brand-accent text-white hover:opacity-90;
+  @apply focus:ring-brand-accent shadow-md hover:shadow-lg;
+}
+
+.btn-ghost {
+  @apply btn text-fg hover:bg-bg-elev;
+  @apply focus:ring-brand-primary;
+}
+
+.btn-sm {
+  @apply px-4 py-2 text-sm;
+}
+
+.btn-lg {
+  @apply px-8 py-4 text-lg;
+}
+
+/* ===== Input System ===== */
+.input {
+  @apply w-full px-4 py-3 bg-bg-elev border border-white/10 rounded-lg;
+  @apply text-fg placeholder:text-fg-muted;
+  @apply focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent;
+  @apply transition-all duration-200;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.input-error {
+  @apply input border-sev-crit focus:ring-sev-crit;
+}
+
+.textarea {
+  @apply input resize-y min-h-[120px];
+}
+
+.select {
+  @apply input appearance-none cursor-pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+}
+
+/* ===== Badge/Tag System ===== */
+.badge {
+  @apply inline-flex items-center px-4 py-2 text-sm font-medium rounded-full;
+  transition: all 0.2s ease-in-out;
+}
+
+.badge-primary {
+  @apply badge bg-brand-primary/20 text-brand-primary border border-brand-primary/50;
+}
+
+.badge-secondary {
+  @apply badge bg-bg-muted/50 text-fg-muted border border-white/10;
+}
+
+.badge-accent {
+  @apply badge bg-brand-accent/20 text-brand-accent border border-brand-accent/50;
+}
+
+.badge-success {
+  @apply badge bg-sev-success/20 text-sev-success border border-sev-success/50;
+}
+
+.badge-crit {
+  @apply badge bg-sev-crit/20 text-sev-crit border border-sev-crit/50;
+}
+
+.badge-warn {
+  @apply badge bg-sev-warn/20 text-sev-warn border border-sev-warn/50;
+}
+
+.badge-info {
+  @apply badge bg-sev-info/20 text-sev-info border border-sev-info/50;
+}
+
+/* ===== Gradient Text ===== */
+.gradient-text {
+  @apply bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent bg-clip-text text-transparent;
+}
+
+.gradient-text-primary {
+  @apply bg-gradient-to-r from-brand-primary to-brand-secondary bg-clip-text text-transparent;
+}
+
+/* ===== Status Color Utilities ===== */
+.text-success { color: var(--sev-success); }
+.text-error { color: var(--sev-crit); }
+.text-warning { color: var(--sev-warn); }
+.text-info { color: var(--sev-info); }
+
+.bg-success { background-color: var(--sev-success); }
+.bg-error { background-color: var(--sev-crit); }
+.bg-warning { background-color: var(--sev-warn); }
+.bg-info { background-color: var(--sev-info); }
+
+/* ===== Loading Spinner ===== */
+.spinner {
+  border: 3px solid rgba(139, 92, 246, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--brand-primary);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Progress Bar ===== */
+.progress-bar {
+  @apply w-full h-2 bg-bg-muted rounded-full overflow-hidden;
+}
+
+.progress-bar-fill {
+  @apply h-full bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full transition-all duration-300;
+}
+
+/* ===== Link Styles ===== */
+.link {
+  @apply text-brand-primary hover:text-brand-primary-hover underline-offset-4 hover:underline;
+  @apply transition-colors duration-200;
+}
+
+/* ===== Divider ===== */
+.divider {
+  @apply border-t border-white/10 my-6;
+}
+
+/* ===== Animation Utilities ===== */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    transform: translateY(10px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+@keyframes slideInRight {
+  from { 
+    transform: translateX(20px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateX(0); 
+    opacity: 1; 
+  }
+}

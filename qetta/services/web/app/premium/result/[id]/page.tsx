@@ -140,7 +140,7 @@ export default function PremiumResultPage() {
 
   const getApprovalColor = (probability: number) => {
     if (probability >= 80) return 'text-green-400';
-    if (probability >= 60) return 'text-cyan-400';
+    if (probability >= 60) return 'text-brand-primary';
     if (probability >= 40) return 'text-yellow-400';
     return 'text-orange-400';
   };
@@ -223,7 +223,7 @@ export default function PremiumResultPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0B0F14] via-[#111827] to-[#0B0F14] flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="spinner w-16 h-16 mb-4"></div>
           <p className="text-white text-xl font-semibold">분석 결과를 불러오는 중...</p>
         </div>
       </div>
@@ -239,7 +239,7 @@ export default function PremiumResultPage() {
           <p className="text-gray-400 mb-6">{error}</p>
           <button
             onClick={() => router.push('/premium/analyze')}
-            className="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl transition-all"
+            className="btn-primary"
           >
             다시 분석하기
           </button>
@@ -257,7 +257,7 @@ export default function PremiumResultPage() {
         
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-400 to-cyan-400 rounded-full mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-sev-success to-brand-primary rounded-full mb-4">
             <span className="text-3xl">✓</span>
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">
@@ -270,7 +270,7 @@ export default function PremiumResultPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+          <div className="card p-6">
             <p className="text-gray-400 text-sm mb-2">총 부채</p>
             <p className="text-2xl font-bold text-white mb-1">
               {formatCurrency(summary.totalDebt)}
@@ -280,9 +280,9 @@ export default function PremiumResultPage() {
             </p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+          <div className="card p-6">
             <p className="text-gray-400 text-sm mb-2">DTI</p>
-            <p className="text-2xl font-bold text-cyan-400 mb-1">
+            <p className="text-2xl font-bold text-brand-primary mb-1">
               {summary.dti.toFixed(1)}%
             </p>
             <p className="text-gray-500 text-sm">
@@ -290,7 +290,7 @@ export default function PremiumResultPage() {
             </p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+          <div className="card p-6">
             <p className="text-gray-400 text-sm mb-2">신용등급</p>
             <p className="text-2xl font-bold text-white mb-1">
               {summary.creditGrade}
@@ -300,7 +300,7 @@ export default function PremiumResultPage() {
             </p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+          <div className="card p-6">
             <p className="text-gray-400 text-sm mb-2">위험도</p>
             <p className={`text-2xl font-bold mb-1 ${getRiskColor(summary.riskLevel)}`}>
               {getRiskLabel(summary.riskLevel)}
@@ -323,8 +323,8 @@ export default function PremiumResultPage() {
                 onClick={() => setSelectedPlanId(plan.id)}
                 className={`relative p-6 rounded-xl text-left transition-all ${
                   selectedPlanId === plan.id
-                    ? 'bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border-2 border-cyan-500'
-                    : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                    ? 'bg-gradient-to-br from-brand-primary/20 to-brand-secondary/20 border-2 border-brand-primary'
+                    : 'card-interactive'
                 }`}
               >
                 {plan.isRecommended && (
@@ -345,7 +345,7 @@ export default function PremiumResultPage() {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-400 text-sm">월 상환액</span>
-                    <span className="text-cyan-400 font-bold">
+                    <span className="text-brand-primary font-bold">
                       {formatCurrency(plan.adjustedPayment)}
                     </span>
                   </div>
@@ -358,7 +358,7 @@ export default function PremiumResultPage() {
                 </div>
 
                 {selectedPlanId === plan.id && (
-                  <div className="text-center text-cyan-400 font-semibold text-sm">
+                  <div className="text-center text-brand-primary font-semibold text-sm">
                     선택됨 ✓
                   </div>
                 )}
@@ -375,7 +375,7 @@ export default function PremiumResultPage() {
             <div className="lg:col-span-2 space-y-6">
               
               {/* Plan Info */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+              <div className="card p-6">
                 <h3 className="text-xl font-bold text-white mb-3">
                   {selectedPlan.planName}
                 </h3>
@@ -387,7 +387,7 @@ export default function PremiumResultPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="text-center p-4 bg-white/5 rounded-lg">
                     <p className="text-gray-400 text-xs mb-1">월 상환액</p>
-                    <p className="text-lg font-bold text-cyan-400">
+                    <p className="text-lg font-bold text-brand-primary">
                       {formatCurrency(selectedPlan.adjustedPayment)}
                     </p>
                   </div>
@@ -412,7 +412,7 @@ export default function PremiumResultPage() {
                 </div>
 
                 {/* Savings Highlight */}
-                <div className="bg-gradient-to-r from-green-500/10 to-cyan-500/10 border border-green-500/30 rounded-xl p-6 mb-6">
+                <div className="bg-gradient-to-r from-sev-success/10 to-brand-primary/10 border border-sev-success/30 rounded-xl p-6 mb-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-300 text-sm mb-1">총 절감 예상액</p>
@@ -455,7 +455,7 @@ export default function PremiumResultPage() {
               </div>
 
               {/* Comparison Chart */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+              <div className="card p-6">
                 <h3 className="text-lg font-bold text-white mb-4">
                   현재 vs 조정 후 비교
                 </h3>
@@ -473,7 +473,7 @@ export default function PremiumResultPage() {
                         style={{ width: '100%' }}
                       ></div>
                       <div 
-                        className="absolute h-full bg-gradient-to-r from-green-500 to-cyan-500"
+                        className="absolute h-full bg-gradient-to-r from-sev-success to-brand-primary"
                         style={{ width: `${(selectedPlan.adjustedPayment / summary.monthlyPayment) * 100}%` }}
                       ></div>
                       <div className="absolute inset-0 flex items-center justify-center text-white text-sm font-semibold">
@@ -501,8 +501,8 @@ export default function PremiumResultPage() {
                   <div className="h-3 bg-white/10 rounded-full overflow-hidden">
                     <div 
                       className={`h-full ${
-                        selectedPlan.approvalProbability >= 80 ? 'bg-gradient-to-r from-green-400 to-cyan-400' :
-                        selectedPlan.approvalProbability >= 60 ? 'bg-gradient-to-r from-cyan-400 to-blue-400' :
+                        selectedPlan.approvalProbability >= 80 ? 'bg-gradient-to-r from-sev-success to-brand-primary' :
+                        selectedPlan.approvalProbability >= 60 ? 'bg-gradient-to-r from-brand-primary to-brand-secondary' :
                         selectedPlan.approvalProbability >= 40 ? 'bg-gradient-to-r from-yellow-400 to-orange-400' :
                         'bg-gradient-to-r from-orange-400 to-red-400'
                       }`}
@@ -518,17 +518,13 @@ export default function PremiumResultPage() {
               )}
 
               {/* Action Buttons */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+              <div className="card p-6">
                 <h3 className="text-lg font-bold text-white mb-4">다음 단계</h3>
                 <div className="space-y-3">
                   <button
                     onClick={handleGeneratePDF}
                     disabled={generatingPDF || !selectedPlanId}
-                    className={`w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all ${
-                      generatingPDF || !selectedPlanId
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'transform hover:scale-105'
-                    }`}
+                    className="btn-primary w-full bg-gradient-to-r from-brand-primary to-brand-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generatingPDF ? '📄 생성 중...' : '📄 신청서 PDF 생성'}
                   </button>

@@ -96,7 +96,7 @@ export default function PremiumAnalyzePage() {
         
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full mb-4">
             <span className="text-3xl">📊</span>
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">
@@ -115,7 +115,7 @@ export default function PremiumAnalyzePage() {
             { icon: '📋', title: '3가지 플랜', desc: '상세 비교 분석' },
             { icon: '🤖', title: 'AI 예측', desc: '승인 확률 계산' }
           ].map((feature, idx) => (
-            <div key={idx} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 text-center">
+            <div key={idx} className="card p-4 text-center">
               <div className="text-3xl mb-2">{feature.icon}</div>
               <p className="text-white font-semibold mb-1">{feature.title}</p>
               <p className="text-gray-400 text-sm">{feature.desc}</p>
@@ -124,7 +124,7 @@ export default function PremiumAnalyzePage() {
         </div>
 
         {/* Main Form Card */}
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-6">
+        <div className="card p-8 mb-6">
           
           {error && (
             <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
@@ -148,7 +148,7 @@ export default function PremiumAnalyzePage() {
                   type="text"
                   value={monthlyIncome}
                   onChange={handleIncomeChange}
-                  className="w-full pl-10 pr-4 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-lg placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50"
+                  className="input pl-10 text-lg"
                   placeholder="3,000,000"
                   required
                 />
@@ -167,7 +167,7 @@ export default function PremiumAnalyzePage() {
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-lg placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50"
+                className="input text-lg"
                 placeholder="010-1234-5678"
                 required
               />
@@ -201,7 +201,7 @@ export default function PremiumAnalyzePage() {
                   type="checkbox"
                   checked={agreedToTerms}
                   onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="mt-1 w-5 h-5 rounded border-white/20 bg-white/10 text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+                  className="mt-1 w-5 h-5 rounded border-white/20 bg-white/10 text-brand-primary focus:ring-2 focus:ring-brand-primary"
                   required
                 />
                 <span className="text-gray-300 text-sm flex-1">
@@ -220,7 +220,7 @@ export default function PremiumAnalyzePage() {
             <button
               type="submit"
               disabled={loading || !agreedToTerms}
-              className="w-full px-8 py-5 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold text-lg rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="btn-primary w-full px-8 py-5 bg-gradient-to-r from-brand-primary to-brand-secondary text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -235,7 +235,7 @@ export default function PremiumAnalyzePage() {
         </div>
 
         {/* Processing Time Notice */}
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 text-center">
+        <div className="card p-4 text-center">
           <p className="text-gray-400 text-sm">
             ⏱️ 분석은 약 <span className="text-white font-semibold">30초</span> 소요됩니다
             (NICE API 조회 + AI 분석)
@@ -244,7 +244,7 @@ export default function PremiumAnalyzePage() {
 
         {/* Benefits Summary */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-gradient-to-br from-green-500/10 to-cyan-500/10 border border-green-500/30 rounded-xl p-4">
+          <div className="bg-gradient-to-br from-sev-success/10 to-brand-primary/10 border border-sev-success/30 rounded-xl p-4">
             <p className="text-green-400 font-semibold mb-2">✓ Premium 혜택</p>
             <ul className="text-gray-300 text-sm space-y-1">
               <li>• 실시간 정확한 신용정보</li>

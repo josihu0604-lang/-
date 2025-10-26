@@ -137,7 +137,7 @@ export default function PaymentPage() {
           </div>
 
           {/* Main Content Card */}
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+          <div className="card p-8">
             
             {error && (
               <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
@@ -159,7 +159,7 @@ export default function PaymentPage() {
                     <p className="text-gray-400 text-sm">1개월 이용권</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-cyan-400">
+                    <p className="text-2xl font-bold text-brand-primary">
                       ₩{amount.toLocaleString('ko-KR')}
                     </p>
                   </div>
@@ -170,7 +170,7 @@ export default function PaymentPage() {
                   <ul className="space-y-2">
                     {planInfo.features.map((feature, idx) => (
                       <li key={idx} className="flex items-center gap-2 text-sm text-gray-300">
-                        <span className="text-cyan-400">✓</span>
+                        <span className="text-brand-primary">✓</span>
                         {feature}
                       </li>
                     ))}
@@ -188,7 +188,7 @@ export default function PaymentPage() {
                 <button
                   onClick={() => handlePayment('CARD')}
                   disabled={loading || !tossReady}
-                  className="p-6 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-500 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="card-interactive p-6 hover:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="text-4xl mb-3">💳</div>
                   <p className="text-white font-bold mb-1">신용/체크카드</p>
@@ -199,7 +199,7 @@ export default function PaymentPage() {
                 <button
                   onClick={() => handlePayment('TRANSFER')}
                   disabled={loading || !tossReady}
-                  className="p-6 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-500 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="card-interactive p-6 hover:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="text-4xl mb-3">🏦</div>
                   <p className="text-white font-bold mb-1">계좌이체</p>
@@ -209,17 +209,17 @@ export default function PaymentPage() {
 
               {loading && (
                 <div className="mt-4 text-center">
-                  <div className="inline-block w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                  <div className="spinner w-8 h-8 mb-2"></div>
                   <p className="text-gray-400 text-sm">결제 페이지로 이동 중...</p>
                 </div>
               )}
             </div>
 
             {/* Total Amount */}
-            <div className="bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/30 rounded-xl p-6 mb-6">
+            <div className="bg-gradient-to-r from-brand-primary/10 to-brand-secondary/10 border border-brand-primary/30 rounded-xl p-6 mb-6">
               <div className="flex items-center justify-between">
                 <p className="text-xl font-bold text-white">총 결제 금액</p>
-                <p className="text-3xl font-bold text-cyan-400">
+                <p className="text-3xl font-bold text-brand-primary">
                   ₩{amount.toLocaleString('ko-KR')}
                 </p>
               </div>
@@ -272,7 +272,7 @@ export default function PaymentPage() {
           <div className="text-center mt-8">
             <p className="text-gray-500 text-sm">
               결제 관련 문의:{' '}
-              <a href="mailto:support@qetta.kr" className="text-cyan-400 hover:text-cyan-300">
+              <a href="mailto:support@qetta.kr" className="text-brand-primary hover:text-brand-primary-hover">
                 support@qetta.kr
               </a>
             </p>

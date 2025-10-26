@@ -208,27 +208,27 @@ export default function PremiumSignupPage() {
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-4 mb-8">
-          <div className={`flex items-center gap-2 ${step === 'info' ? 'text-cyan-400' : 'text-gray-500'}`}>
+          <div className={`flex items-center gap-2 ${step === 'info' ? 'text-brand-primary' : 'text-gray-500'}`}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 'info' ? 'bg-cyan-500 text-white' : 'bg-gray-700'
+              step === 'info' ? 'bg-brand-primary text-white' : 'bg-gray-700'
             }`}>
               1
             </div>
             <span className="text-sm font-medium">정보 입력</span>
           </div>
           <div className="w-12 h-px bg-gray-700"></div>
-          <div className={`flex items-center gap-2 ${step === 'phone' ? 'text-cyan-400' : 'text-gray-500'}`}>
+          <div className={`flex items-center gap-2 ${step === 'phone' ? 'text-brand-primary' : 'text-gray-500'}`}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 'phone' ? 'bg-cyan-500 text-white' : 'bg-gray-700'
+              step === 'phone' ? 'bg-brand-primary text-white' : 'bg-gray-700'
             }`}>
               2
             </div>
             <span className="text-sm font-medium">본인인증</span>
           </div>
           <div className="w-12 h-px bg-gray-700"></div>
-          <div className={`flex items-center gap-2 ${step === 'plan' ? 'text-cyan-400' : 'text-gray-500'}`}>
+          <div className={`flex items-center gap-2 ${step === 'plan' ? 'text-brand-primary' : 'text-gray-500'}`}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step === 'plan' ? 'bg-cyan-500 text-white' : 'bg-gray-700'
+              step === 'plan' ? 'bg-brand-primary text-white' : 'bg-gray-700'
             }`}>
               3
             </div>
@@ -255,7 +255,7 @@ export default function PremiumSignupPage() {
                   type="text"
                   value={userInfo.name}
                   onChange={(e) => setUserInfo({ ...userInfo, name: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                  className="input"
                   placeholder="홍길동"
                   required
                 />
@@ -267,7 +267,7 @@ export default function PremiumSignupPage() {
                   type="email"
                   value={userInfo.email}
                   onChange={(e) => setUserInfo({ ...userInfo, email: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                  className="input"
                   placeholder="example@email.com"
                   required
                 />
@@ -279,7 +279,7 @@ export default function PremiumSignupPage() {
                   type="password"
                   value={userInfo.password}
                   onChange={(e) => setUserInfo({ ...userInfo, password: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                  className="input"
                   placeholder="8자 이상"
                   required
                 />
@@ -291,7 +291,7 @@ export default function PremiumSignupPage() {
                   type="password"
                   value={userInfo.passwordConfirm}
                   onChange={(e) => setUserInfo({ ...userInfo, passwordConfirm: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                  className="input"
                   placeholder="비밀번호 재입력"
                   required
                 />
@@ -299,7 +299,7 @@ export default function PremiumSignupPage() {
 
               <button
                 type="submit"
-                className="w-full px-6 py-4 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl transition-all transform hover:scale-105"
+                className="btn-primary w-full"
               >
                 다음 단계
               </button>
@@ -316,14 +316,14 @@ export default function PremiumSignupPage() {
                     type="tel"
                     value={userInfo.phone}
                     onChange={(e) => setUserInfo({ ...userInfo, phone: e.target.value })}
-                    className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                    className="input flex-1"
                     placeholder="010-1234-5678"
                     required
                   />
                   <button
                     onClick={handlePhoneVerification}
                     disabled={loading || !userInfo.phone}
-                    className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? '전송중...' : '인증번호 받기'}
                   </button>
@@ -336,7 +336,7 @@ export default function PremiumSignupPage() {
                   type="text"
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                  className="input"
                   placeholder="6자리 숫자"
                   maxLength={6}
                 />
@@ -345,7 +345,7 @@ export default function PremiumSignupPage() {
               <button
                 onClick={handleVerifyCode}
                 disabled={loading || !verificationCode || verificationCode.length !== 6}
-                className="w-full px-6 py-4 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? '확인중...' : '인증 완료'}
               </button>
@@ -373,8 +373,8 @@ export default function PremiumSignupPage() {
                     onClick={() => handlePlanSelect(plan.id)}
                     className={`relative p-6 rounded-xl cursor-pointer transition-all ${
                       selectedPlan === plan.id
-                        ? 'bg-cyan-500/20 border-2 border-cyan-500'
-                        : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                        ? 'bg-brand-primary/20 border-2 border-brand-primary'
+                        : 'card'
                     }`}
                   >
                     {plan.popular && (
@@ -384,21 +384,21 @@ export default function PremiumSignupPage() {
                     )}
 
                     <h4 className="text-lg font-bold text-white mb-2">{plan.name}</h4>
-                    <p className="text-3xl font-bold text-cyan-400 mb-4">
+                    <p className="text-3xl font-bold text-brand-primary mb-4">
                       ₩{plan.price.toLocaleString('ko-KR')}
                     </p>
 
                     <ul className="space-y-2">
                       {plan.features.map((feature, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-sm text-gray-300">
-                          <span className="text-cyan-400">✓</span>
+                          <span className="text-brand-primary">✓</span>
                           {feature}
                         </li>
                       ))}
                     </ul>
 
                     {selectedPlan === plan.id && (
-                      <div className="mt-4 text-center text-cyan-400 font-semibold">
+                      <div className="mt-4 text-center text-brand-primary font-semibold">
                         선택됨 ✓
                       </div>
                     )}
@@ -409,7 +409,7 @@ export default function PremiumSignupPage() {
               <button
                 onClick={handleProceedToPayment}
                 disabled={loading}
-                className="w-full px-6 py-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary w-full bg-gradient-to-r from-brand-primary to-brand-secondary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? '처리중...' : '결제하기'}
               </button>
@@ -430,7 +430,7 @@ export default function PremiumSignupPage() {
             이미 계정이 있으신가요?{' '}
             <button
               onClick={() => router.push('/premium/login')}
-              className="text-cyan-400 hover:text-cyan-300 font-semibold"
+              className="text-brand-primary hover:text-brand-primary-hover font-semibold"
             >
               로그인
             </button>
