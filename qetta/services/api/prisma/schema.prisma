@@ -368,3 +368,16 @@ model ApplicationDocument {
   @@index([applicationId])
   @@index([documentId])
 }
+
+model FreeAnalysis {
+  id            String   @id @default(uuid()) @db.Uuid
+  sessionId     String   @unique
+  ocrData       String   @db.Text
+  basicAnalysis String   @db.Text
+  expiresAt     DateTime @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@index([createdAt(sort: Desc)])
+}
