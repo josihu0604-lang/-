@@ -27,6 +27,8 @@ app.register(require('./routes/accounts'), { prefix:'/api/v1' });
 app.register(require('./routes/debt-analysis'), { prefix:'/api/v1' });
 app.register(require('./routes/free-analysis'), { prefix:'/api/v1/free' });
 app.register(require('./routes/premium-auth'), { prefix:'/api/v1/auth' });
+app.register(require('./routes/payments'), { prefix:'/api/v1/payments' });
+app.register(require('./routes/premium-analysis'), { prefix:'/api/v1/premium' });
 
 app.listen({ port, host:'0.0.0.0' }).then(()=>{
   app.log.info(`API on :${port}`);
