@@ -1,0 +1,23 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: qetta-api-pdb
+  namespace: qetta-production
+spec:
+  minAvailable: 2  # Always keep at least 2 API pods running
+  selector:
+    matchLabels:
+      app: qetta
+      component: api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: qetta-web-pdb
+  namespace: qetta-production
+spec:
+  minAvailable: 2  # Always keep at least 2 Web pods running
+  selector:
+    matchLabels:
+      app: qetta
+      component: web

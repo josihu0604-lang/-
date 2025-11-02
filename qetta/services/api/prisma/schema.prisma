@@ -16,6 +16,17 @@ enum SubscriptionTier {
   ENTERPRISE
 }
 
+enum UserTier {
+  FREE
+  PREMIUM
+}
+
+enum PDFStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
 enum SubscriptionStatus {
   ACTIVE
   CANCELLED
@@ -119,19 +130,25 @@ enum ApplicationStatus {
 // ===== MODELS =====
 
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
-  email         String         @unique
-  password      String
-  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
-  tokens        ApiToken[]
-  subscription  Subscription?
-  usage         UsageRecord[]
-  verifications Verification[]
-  documents     Document[]
-  externalAuths ExternalAuth[]
-  bankAccounts  BankAccount[]
-  debtAnalyses  DebtAnalysis[]
-  applications  Application[]
+  id               String            @id @default(uuid()) @db.Uuid
+  email            String            @unique
+  password         String
+  name             String?
+  phone            String?
+  tier             UserTier          @default(FREE)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(6)
+  tokens           ApiToken[]
+  subscription     Subscription?
+  usage            UsageRecord[]
+  verifications    Verification[]
+  documents        Document[]
+  externalAuths    ExternalAuth[]
+  bankAccounts     BankAccount[]
+  debtAnalyses     DebtAnalysis[]
+  applications     Application[]
+  premiumAnalyses  PremiumAnalysis[]
+  generatedPDFs    GeneratedPDF[]
+  paymentOrders    PaymentOrder[]
 }
 
 model ApiToken {
@@ -367,4 +384,71 @@ model ApplicationDocument {
 
   @@index([applicationId])
   @@index([documentId])
+}
+
+model FreeAnalysis {
+  id            String   @id @default(uuid()) @db.Uuid
+  sessionId     String   @unique
+  ocrData       String   @db.Text
+  basicAnalysis String   @db.Text
+  expiresAt     DateTime @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@index([createdAt(sort: Desc)])
+}
+
+model PremiumAnalysis {
+  id           String         @id @default(uuid()) @db.Uuid
+  userId       String         @db.Uuid
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone        String?
+  results      Json
+  status       String         @default("COMPLETED")
+  createdAt    DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime       @updatedAt @db.Timestamptz(6)
+  generatedPDFs GeneratedPDF[]
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model PaymentOrder {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @db.Uuid
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId           String    @unique
+  amount            Decimal   @db.Decimal(15, 2)
+  planName          String
+  planDescription   String?
+  paymentMethod     String?
+  tossPaymentKey    String?   @unique
+  status            String    @default("PENDING")
+  approvedAt        DateTime?
+  failReason        String?
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+}
+
+model GeneratedPDF {
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @db.Uuid
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysisId  String           @db.Uuid
+  analysis    PremiumAnalysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  planType    String
+  filename    String
+  filePath    String
+  status      PDFStatus        @default(COMPLETED)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([analysisId])
+  @@index([createdAt(sort: Desc)])
 }

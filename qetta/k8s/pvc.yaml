@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qetta-pdf-storage
+  namespace: qetta-production
+  labels:
+    app: qetta
+    component: storage
+  annotations:
+    description: "Persistent storage for generated PDF application documents"
+spec:
+  accessModes:
+  - ReadWriteMany  # Multiple pods can read/write simultaneously
+  # Note: Change storageClassName based on your cloud provider:
+  # - GKE: standard-rwx (Filestore)
+  # - EKS: efs-sc (EFS)
+  # - AKS: azurefile (Azure Files)
+  storageClassName: standard-rwx
+  resources:
+    requests:
+      storage: 100Gi
+    # Optional: Set limits to prevent unbounded growth
+    # limits:
+    #   storage: 200Gi
+  # Optional: Selector for specific PV requirements
+  # selector:
+  #   matchLabels:
+  #     type: ssd

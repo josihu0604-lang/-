@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentry-config
+  namespace: qetta-production
+data:
+  sentry.js: |
+    const Sentry = require('@sentry/node');
+    const { ProfilingIntegration } = require('@sentry/profiling-node');
+
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'production',
+      
+      // Performance Monitoring
+      tracesSampleRate: 1.0,
+      profilesSampleRate: 1.0,
+      
+      integrations: [
+        new ProfilingIntegration(),
+      ],
+      
+      // Error filtering
+      beforeSend(event, hint) {
+        // Filter out 4xx errors except 401/403
+        if (event.exception) {
+          const error = hint.originalException;
+          if (error && error.statusCode) {
+            const code = error.statusCode;
+            if (code >= 400 && code < 500 && code !== 401 && code !== 403) {
+              return null;
+            }
+          }
+        }
+        return event;
+      },
+      
+      // Ignore certain errors
+      ignoreErrors: [
+        'ResizeObserver loop limit exceeded',
+        'Non-Error promise rejection captured',
+      ],
+    });
+
+    module.exports = Sentry;
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: datadog-config
+  namespace: qetta-production
+data:
+  datadog.yaml: |
+    api_key: ${DATADOG_API_KEY}
+    site: datadoghq.com
+    logs_enabled: true
+    apm_config:
+      enabled: true
+      env: production
+    
+    # Log collection
+    logs_config:
+      container_collect_all: true
+      processing_rules:
+        - type: exclude_at_match
+          name: exclude_healthchecks
+          pattern: /health
+    
+    # APM
+    apm_non_local_traffic: true
+    
+    # Process monitoring
+    process_config:
+      enabled: true

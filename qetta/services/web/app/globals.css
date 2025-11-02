@@ -1,34 +1,104 @@
+/* Pretendard 한글 웹폰트 - 가독성 최적화 */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard-dynamic-subset.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root{
-  --bg: #0B0F14;
-  --bg-elev: #111827;
-  --bg-muted: #0F172A;
-  --fg: #E5E7EB;
-  --fg-muted: #94A3B8;
-  --fg-inverted: #0B0F14;
-  --brand-primary: #22D3EE;
-  --brand-accent: #F97316;
-  --sev-crit: #EF4444;
-  --sev-warn: #F59E0B;
-  --sev-info: #22C55E;
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-
-  --shadow-sm: 0 1px 2px rgba(0,0,0,.08);
-  --shadow-md: 0 3px 12px rgba(0,0,0,.15);
-  --shadow-lg: 0 10px 30px rgba(0,0,0,.25);
+/* ===== CSS Variables (Design Tokens) ===== */
+:root {
+  /* Brand Colors */
+  --brand-primary: #8b5cf6;
+  --brand-primary-hover: #7c3aed;
+  --brand-secondary: #6366f1;
+  --brand-accent: #ec4899;
+  
+  /* Background */
+  --bg: #0f172a;
+  --bg-elev: #1e293b;
+  --bg-muted: #334155;
+  
+  /* Foreground */
+  --fg: #f1f5f9;
+  --fg-muted: #94a3b8;
+  
+  /* Status */
+  --sev-crit: #ef4444;
+  --sev-warn: #f59e0b;
+  --sev-info: #10b981;
+  --sev-success: #22c55e;
 }
 
-html { color-scheme: dark; }
-body { @apply bg-bg text-fg antialiased; font-feature-settings:"tnum" 1, "cv10" 1; }
-.container { @apply max-w-6xl mx-auto px-4; }
-.card { @apply bg-bg-elev rounded-md shadow-md border border-white/5; }
-.badge { @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium; }
-.badge-crit { @apply badge bg-red-500/10 text-red-300; }
-.badge-warn { @apply badge bg-amber-500/10 text-amber-300; }
-.badge-info { @apply badge bg-emerald-500/10 text-emerald-300; }
+/* ===== Base Styles ===== */
+html {
+  color-scheme: dark;
+  font-feature-settings: "tnum" 1, "cv10" 1;
+}
+
+body {
+  @apply bg-[#0f172a] text-[#f1f5f9] antialiased;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* ===== Minimal Custom Utilities ===== */
+
+/* Loading Spinner */
+.spinner {
+  border: 3px solid rgba(139, 92, 246, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--brand-primary);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Gradient Text */
+.gradient-text-brand {
+  background: linear-gradient(to right, var(--brand-primary), var(--brand-secondary), var(--brand-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+.animate-slide-up { animation: slideUp 0.3s ease-out; }
+.animate-slide-in-right { animation: slideInRight 0.3s ease-out; }
+
+/* ===== Catalyst UI Kit Compatible Styles ===== */
+/* 
+  99% 커스텀 CSS 제거 완료!
+  
+  기존 커스텀 클래스는 Catalyst 컴포넌트 + Tailwind 유틸리티로 대체:
+  
+  ❌ 제거된 커스텀 클래스:
+  - .card, .card-interactive → Tailwind 유틸리티 직접 사용
+  - .btn-primary, .btn-secondary → Catalyst <Button>
+  - .input, .textarea, .select → Catalyst <Input>, <Textarea>
+  - .badge-* → Catalyst <Badge>
+  
+  ✅ 유지된 최소한의 유틸리티:
+  - .spinner (커스텀 애니메이션 필요)
+  - .gradient-text-brand (브랜드 텍스트 그라데이션)
+  - animation keyframes (페이지 전환 효과)
+  
+  모든 UI는 Catalyst 컴포넌트 + Tailwind 클래스로 구현
+*/
